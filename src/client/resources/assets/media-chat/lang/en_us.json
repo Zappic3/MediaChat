@@ -1,0 +1,4 @@
+{
+  "text.config.media-chat-config.option.mediaChatHeight" : "Media Chat Height",
+  "text.config.media-chat-config.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up"
+}

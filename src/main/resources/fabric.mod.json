@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "media-chat",
+	"version": "${version}",
+	"name": "Media Chat",
+	"description": "Make your Chat more Lively!",
+	"authors": [
+		"Zappic3"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/media-chat/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.zappic3.mediachat.MediaChat"
+		],
+		"client": [
+			"com.zappic3.mediachat.MediaChatClient"
+		]
+	},
+	"mixins": [
+		"media-chat.mixins.json",
+		{
+			"config": "media-chat.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.3",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
