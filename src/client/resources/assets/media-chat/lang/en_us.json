@@ -1,4 +1,6 @@
 {
   "text.config.media-chat-config.option.mediaChatHeight" : "Media Chat Height",
-  "text.config.media-chat-config.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up"
+  "text.config.media-chat-config.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up",
+  "text.config.media-chat-config.option.maxMediaWidth" : "Media Max Width",
+  "text.config.media-chat-config.option.maxMediaWidth.tooltip" : "Determines the max. media width,\nrelative to your chat width"
 }

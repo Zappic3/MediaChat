@@ -1,17 +1,29 @@
 package com.zappic3.mediachat;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.slf4j.Logger;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Utility {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final static String MESSAGE_TAG_FORMAT = "#%s;";
     private final static String MESSAGE_TAG_VALUE_FORMAT = "#%s;%s";
-    private final static String MESSAGE_TAG_VALUE_REGEX = "#%s;([^#]+)";
+    private final static String MESSAGE_TAG_VALUE_REGEX = "#%s;([^#]+)"; // detect tags with tag value
+    private final static String MESSAGE_TAG_REGEX = "#%s;[^#]*";         // detect any tag
 
     public enum MESSAGE_TAG {
         BufferGenerated,
@@ -68,9 +80,7 @@ public class Utility {
 
     public static OrderedText MessageRemoveTag(OrderedText text, MESSAGE_TAG tag) {
         String plainText = OrderedTextToString(text);
-        Pattern pattern = Pattern.compile(MESSAGE_TAG_VALUE_REGEX.formatted(tagToString(tag)));
-
-        String resultText = plainText.replaceAll(pattern.pattern(), "");
+        String resultText = plainText.replaceAll(MESSAGE_TAG_REGEX.formatted(tagToString(tag)), "");
         return StringToOrderedText(resultText);
     }
 
@@ -84,5 +94,4 @@ public class Utility {
     public static OrderedText StringToOrderedText(String text) {
         return Language.getInstance().reorder(Text.of(text));
     }
-
 }

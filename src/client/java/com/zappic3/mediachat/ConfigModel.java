@@ -7,4 +7,6 @@ import io.wispforest.owo.config.annotation.*;
 public class ConfigModel {
     @RangeConstraint(min = 3, max = 15)
     public int mediaChatHeight = 5;
+    @RangeConstraint(min = 0.1F, max = 1.0F)
+    public float maxMediaWidth = 1.0F;
 }

@@ -8,6 +8,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import com.zappic3.mediachat.MediaChatConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class MediaChatClient implements ClientModInitializer {
 	public static final MediaChatConfig CONFIG = MediaChatConfig.createAndLoad();
