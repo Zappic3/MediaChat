@@ -34,11 +34,15 @@ public abstract class ChatHudMixin {
     @Shadow
     protected abstract int getLineHeight();
 
+    @Shadow
+    private int scrolledLines;
+
     @Final
     @Shadow
     private List<ChatHudLine.Visible> visibleMessages;
 
-    @Shadow @Final private List<ChatHudLine> messages;
+    @Shadow @Final
+    private List<ChatHudLine> messages;
 
     @Redirect(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
@@ -55,7 +59,47 @@ public abstract class ChatHudMixin {
             }
 
         } else if (MessageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight())) {
-           // TODO: adjust buffer size
+            int oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
+            int newSize = CONFIG.mediaChatHeight();
+            if (newSize < oldSize) {scrolledLines = Math.max(scrolledLines-(oldSize - newSize), 0);}
+
+            List<ChatHudLine.Visible> newVisibleMessages = new ArrayList<>();
+            boolean foundCurrentMessage = false;
+            int currentMessageIndex = 0;
+            boolean finishedCurrentMessage = false;
+            for (int i = 0; i < visibleMessages.size()-1; i++) {
+                ChatHudLine.Visible visible = visibleMessages.get(visibleMessages.size()-1-i);
+                if (!foundCurrentMessage) {
+                    if (visible.content() == text) {
+                        foundCurrentMessage = true;
+                        ChatHudLine.Visible visibleWithoutTag = new ChatHudLine.Visible(
+                                visible.addedTime(),
+                                MessageRemoveTag(visible.content(), MESSAGE_TAG.BufferGenerated),
+                                visible.indicator(),
+                                visible.endOfEntry());
+                        newVisibleMessages.addFirst(visibleWithoutTag);
+                    } else {
+                        newVisibleMessages.addFirst(visible);
+                    }
+                } else if (!finishedCurrentMessage) {
+                    if (MessageHasTag(visible.content(), MESSAGE_TAG.LowestOfBuffer)) {
+                        finishedCurrentMessage = true;
+                    } else if (!MessageHasTag(visible.content(), MESSAGE_TAG.Buffer)) {
+                        newVisibleMessages.addFirst(visible);
+                    }
+                } else {
+                    newVisibleMessages.addFirst(visible);
+                    currentMessageIndex += 1;
+                }
+            }
+            if (foundCurrentMessage) {
+                addBufferLines(newVisibleMessages, currentMessageIndex);
+                visibleMessages.clear();
+                visibleMessages.addAll(newVisibleMessages);
+            } else {
+                LOGGER.error("Error adjusting media buffer size!\nIf this error persists, try relogging / clearing chat.");
+            }
+
 
         } else if (MessageHasTag(text, MESSAGE_TAG.LowestOfBuffer)) {
             int renderColor = 0xFF0000;
