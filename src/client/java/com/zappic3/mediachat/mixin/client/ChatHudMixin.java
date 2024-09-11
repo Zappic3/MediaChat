@@ -1,6 +1,7 @@
 package com.zappic3.mediachat.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.zappic3.mediachat.MediaElement;
 import com.zappic3.mediachat.Utility;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -44,10 +45,13 @@ public abstract class ChatHudMixin {
     @Shadow @Final
     private List<ChatHudLine> messages;
 
+    @Shadow public abstract int getHeight();
+
     @Redirect(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
     public int drawTextWithShadow(DrawContext instance, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
         String plainMessage = OrderedTextToString(text);
+
         if (plainMessage.contains("...") && !MessageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
             // find message position in the array of all chat messages and add more lines
             for (int i = 0; i < visibleMessages.size(); ++i) {
@@ -109,12 +113,13 @@ public abstract class ChatHudMixin {
 
             int y1 = y + calculateChatHeight(1);
             int y2 = y-calculateChatHeight(CONFIG.mediaChatHeight());
-
             //instance.fill(x, y1, x + 100, y2, renderColorWithAlpha);
-            Identifier texture = Identifier.of("media-chat", "textures/test.png");
+            //Identifier texture = Identifier.of("media-chat", "textures/image.png");
+            MediaElement mediaElement = MediaElement.of("https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png");
+
             float ySpace = Math.abs(y1-y2);
             float xSpace = client.inGameHud.getChatHud().getWidth() * CONFIG.maxMediaWidth();
-            renderTexture(instance, client, texture, x, y2, 64, 64, xSpace, ySpace, alpha / 255.0F);
+            renderTexture(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, alpha / 255.0F);
             instance.drawTextWithShadow(textRenderer, text, x, y, color);
 
         } else {
@@ -147,6 +152,11 @@ public abstract class ChatHudMixin {
         double chatLineSpacing = (Double) client.options.getChatLineSpacing().getValue();
         int lineHeight = this.getLineHeight();
         return (int) ((chatLineSpacing + lineHeight) * numberOfLines);
+    }
+
+    @Unique
+    private boolean isModMessage(String message) {
+        return false;
     }
 
     @Unique
@@ -183,8 +193,10 @@ public abstract class ChatHudMixin {
 
         // Draw texture
         context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight);
-        //context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000); // just for debugging
-        context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height);
+        if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
+        if (CONFIG.debugOptions.renderImages()) {
+            context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
+        }
         context.disableScissor();
 
         // Restore previous state
