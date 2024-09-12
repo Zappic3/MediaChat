@@ -17,5 +17,7 @@ public class ConfigModel {
         public boolean renderImages = true;
         public boolean renderHiddenChatMessages = false;
         public boolean displayScissorArea = false;
+        @RestartRequired
+        public boolean useNameInsteadOfID = false;
     }
 }

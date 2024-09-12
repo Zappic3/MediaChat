@@ -22,8 +22,11 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.zappic3.mediachat.MediaChatClient.CONFIG;
 
 public class Utility {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -37,18 +40,26 @@ public class Utility {
     public enum MESSAGE_TAG {
         BufferGenerated,
         Buffer,
-        LowestOfBuffer
+        LowestOfBuffer,
+        MessageID
     }
 
     // #######################
     // Chat Message Management
     // #######################
     private static String tagToString(MESSAGE_TAG tag) {
-        return tag.name()+"";
+        return CONFIG.debugOptions.useNameInsteadOfID() ? tag.toString() : tag.ordinal()+"";
     }
 
     public static ChatHudLine.Visible addMessageTag(ChatHudLine.Visible text, MESSAGE_TAG tag) {
         return new ChatHudLine.Visible(text.addedTime(), addMessageTag(text.content(), tag), text.indicator(), text.endOfEntry());
+    }
+
+    public static OrderedText addMessageTags(String text, List<MESSAGE_TAG> tags) {
+        for (MESSAGE_TAG tag : tags) {
+            text = OrderedTextToString(addMessageTag(text, tag));
+        }
+        return StringToOrderedText(text);
     }
 
     public static OrderedText addMessageTag(String text, MESSAGE_TAG tag) {
@@ -59,6 +70,16 @@ public class Utility {
     public static OrderedText addMessageTag(OrderedText text, MESSAGE_TAG tag) {
         String plainText = OrderedTextToString(text);
         return addMessageTag(plainText, tag);
+    }
+
+    public static OrderedText addMessageTagValues(OrderedText text, List<MESSAGE_TAG> tags, List<String> values) {
+        if (tags.size() != values.size()) {return null;}
+        for (int i = 0; i < tags.size(); i++) {
+            String value = values.get(i);
+            MESSAGE_TAG tag = tags.get(i);
+            text = addMessageTagValue(text, tag, value);
+        }
+        return text;
     }
 
     public static OrderedText addMessageTagValue(OrderedText text, MESSAGE_TAG tag, String value) {
@@ -120,7 +141,6 @@ public class Utility {
         }
         return null;
     }
-
 
     // #######################
     // Texture Loading

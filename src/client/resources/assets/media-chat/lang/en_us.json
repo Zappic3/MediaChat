@@ -1,4 +1,5 @@
 {
+  "text.config.media-chat-config.title" : "MediaChat Options",
   "text.config.media-chat-config.option.mediaChatHeight" : "Media Chat Height",
   "text.config.media-chat-config.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up",
   "text.config.media-chat-config.option.maxMediaWidth" : "Media Max Width",
@@ -6,5 +7,7 @@
   "text.config.media-chat-config.category.debugOptions" : "Advanced / Debug Options",
   "text.config.media-chat-config.option.debugOptions.renderImages" : "Render Chat Images",
   "text.config.media-chat-config.option.debugOptions.renderHiddenChatMessages" : "Render Hidden Chat Messages",
-  "text.config.media-chat-config.option.debugOptions.displayScissorArea" : "Display Scissor Area"
+  "text.config.media-chat-config.option.debugOptions.displayScissorArea" : "Display Scissor Area",
+  "text.config.media-chat-config.option.debugOptions.useNameInsteadOfID" : "Name Instead of ID",
+  "text.config.media-chat-config.option.debugOptions.useNameInsteadOfID.tooltip" : "Uses the internal tag names\ninstead of the ID for\nchat tags"
 }
