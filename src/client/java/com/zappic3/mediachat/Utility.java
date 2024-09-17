@@ -1,20 +1,14 @@
 package com.zappic3.mediachat;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
 import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
@@ -22,6 +16,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +30,7 @@ public class Utility {
     private final static String MESSAGE_TAG_VALUE_REGEX = "#%s;([^#]+)"; // detect tags with tag value
     private final static String MESSAGE_TAG_REGEX = "#%s;[^#]*";         // detect any tag
 
-    private final static String DETECT_MOD_MESSAGE_REGEX = " \\[(?:https?:\\/\\/)?([-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_\\+.~#?&\\/\\/=]*)\\]   ";
+    private final static String DETECT_MEDIA_MESSAGE_REGEX = "((?:https?:\\/\\/)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_\\+.~#?&\\/\\/=]*)";
 
     public enum MESSAGE_TAG {
         BufferGenerated,
@@ -120,21 +115,40 @@ public class Utility {
     public static String OrderedTextToString(OrderedText text) {
         RawTextCollector textCollector = new RawTextCollector();
         text.accept(textCollector);
-        String plainText = textCollector.getText();
-        return plainText;
+        return textCollector.getText();
+    }
+
+    public static List<RawTextCollector.CharacterWithStyle> OrderedTextToCharacterWithStyle(OrderedText text) {
+        RawTextCollector textCollector = new RawTextCollector();
+        text.accept(textCollector);
+        return textCollector.getCharactersWithStyles();
     }
 
     public static OrderedText StringToOrderedText(String text) {
         return Language.getInstance().reorder(Text.of(text));
     }
 
-    public static boolean isModMessage(String message) {
-        Pattern regex = Pattern.compile(DETECT_MOD_MESSAGE_REGEX);
-        return regex.matcher(message).matches();
+    public static boolean isMediaMessage(String message, Boolean exactMatch) {
+        String fullRegex =  Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_MESSAGE_REGEX + Pattern.quote(CONFIG.endMediaUrl());
+        Pattern regex = Pattern.compile(fullRegex);
+        return exactMatch ? regex.matcher(message).matches() : regex.matcher(message).find();
+    }
+
+    public static String getMediaMessageRegex() {
+        return Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_MESSAGE_REGEX + Pattern.quote(CONFIG.endMediaUrl());
+    }
+
+    public static OrderedText characterWithStyleToOrderedText(List<RawTextCollector.CharacterWithStyle> chars) {
+        List<OrderedText> styledTexts = new ArrayList<>();
+        for (RawTextCollector.CharacterWithStyle charWithStyle : chars) {
+            OrderedText styledChar = OrderedText.styled(charWithStyle.codePoint(), charWithStyle.style());
+            styledTexts.add(styledChar);
+        }
+        return OrderedText.concat(styledTexts);
     }
 
     public static String getUrlFromModMessage(String message) {
-        Pattern regex = Pattern.compile(DETECT_MOD_MESSAGE_REGEX);
+        Pattern regex = Pattern.compile(DETECT_MEDIA_MESSAGE_REGEX);
         Matcher matcher = regex.matcher(message);
         if (matcher.matches()) {
             return matcher.group(1);

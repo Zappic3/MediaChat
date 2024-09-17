@@ -3,7 +3,7 @@ package com.zappic3.mediachat.mixin.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.zappic3.mediachat.MediaElement;
 import com.zappic3.mediachat.RandomString;
-import com.zappic3.mediachat.Utility;
+import com.zappic3.mediachat.RawTextCollector;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -20,15 +20,13 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.zappic3.mediachat.MediaChatClient.CONFIG;
-import static com.zappic3.mediachat.Utility.*;
-import static com.zappic3.mediachat.Utility.MessageHasTag;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
+import static com.zappic3.mediachat.Utility.*;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {
@@ -56,9 +54,13 @@ public abstract class ChatHudMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
     public int drawTextWithShadow(DrawContext instance, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
         String plainMessage = OrderedTextToString(text);
-        // todo: Combine Multiline Messages into one in order to detect URLs (Think about how to handle formatted text) (maybe only combine messages when current message contains "["?)
-        LOGGER.info(plainMessage + " : " + isModMessage(plainMessage));
-        if (isModMessage(plainMessage) && !MessageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
+
+        // if the message contains the media starting element, isolate the message
+        if (plainMessage.contains(CONFIG.startMediaUrl()) && !MessageHasTag(text, MESSAGE_TAG.MessageID) && !isMediaMessage(plainMessage, true)) {
+            isolateMediaMessage(getMessagePos(text));
+        }
+
+        if (isMediaMessage(plainMessage, true) && !MessageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
             // init newly received media message
             for (int i = 0; i < visibleMessages.size(); ++i) {
                 ChatHudLine.Visible visible = visibleMessages.get(i);
@@ -70,6 +72,7 @@ public abstract class ChatHudMixin {
 
         } else if (MessageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight())) {
             //the message height has been changed in the options, needs to be corrected
+            // todo this is broken (probably because of the new message detection & isolation)
             // todo: rethink the chat line buffer height approach, because wide images have too much buffer, which makes it look wierd (maybe buffer is max, but use less lines if they are not needed?)
             int oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
             int newSize = CONFIG.mediaChatHeight();
@@ -149,12 +152,93 @@ public abstract class ChatHudMixin {
             }
 
         } else {
-            if (!(MessageHasTag(text, MESSAGE_TAG.Buffer)) || CONFIG.debugOptions.renderHiddenChatMessages()) {
+            if (!(MessageHasTag(text, MESSAGE_TAG.MessageID)) || CONFIG.debugOptions.renderHiddenChatMessages()) {
                 instance.drawTextWithShadow(textRenderer, text, x, y, color);
             }
         }
         return 0;
     }
+
+    @Unique
+    private void isolateMediaMessage(int messagePos) {
+        ChatHudLine.Visible visible = visibleMessages.get(messagePos);
+        List<RawTextCollector.CharacterWithStyle> concMsg = RawTextCollector.removeLeadingWhitespace(OrderedTextToCharacterWithStyle(visible.content()));
+        List<Integer> toDelete = new ArrayList<>();
+        toDelete.add(messagePos);
+        for (int i = messagePos-1; i >= 0; i--) {
+            OrderedText currentMsg = visibleMessages.get(i).content();
+            List<RawTextCollector.CharacterWithStyle> currentMsgAsChars = OrderedTextToCharacterWithStyle(currentMsg);
+            RawTextCollector.removeLeadingWhitespace(currentMsgAsChars);
+            concMsg.addAll(currentMsgAsChars);
+            toDelete.add(i);
+            if (OrderedTextToString(currentMsg).contains(CONFIG.endMediaUrl())) {
+                break;
+            }
+        }
+        // only proceed, if the string contains a valid mediaMessage
+        String concString = RawTextCollector.convertToPlainString(concMsg);
+        if (isMediaMessage(concString, false)) {
+            for (Integer pos : toDelete) {
+                if (pos >= 0 && pos < visibleMessages.size()) {
+                    visibleMessages.set(pos, null);
+                }
+            }
+
+            List<RawTextCollector.CharacterWithStyle> concMsgCharList = concMsg;
+            List<RawTextCollector.CharacterWithStyle> beforeMediaMessage = new LinkedList<>();
+            List<RawTextCollector.CharacterWithStyle> mediaMessage = new LinkedList<>();
+            List<RawTextCollector.CharacterWithStyle> afterMediaMessage = new LinkedList<>();
+
+            Pattern pattern = Pattern.compile(getMediaMessageRegex(), Pattern.DOTALL);
+            Matcher matcher = pattern.matcher(concString);
+
+            if (matcher.find()) {
+                int startIndex = matcher.start();
+                int endIndex = matcher.end();
+
+                for (int i = 0; i < startIndex; i++) {
+                    beforeMediaMessage.add(concMsgCharList.get(i));
+                }
+                for (int i = startIndex; i < endIndex; i++) {
+                    mediaMessage.add(concMsgCharList.get(i));
+                }
+                for (int i = endIndex; i < concString.length(); i++) {
+                    afterMediaMessage.add(concMsgCharList.get(i));
+                }
+
+                if (!beforeMediaMessage.isEmpty()) {
+                    OrderedText beforeMediaMessageText = characterWithStyleToOrderedText(beforeMediaMessage);
+                    visibleMessages.add(messagePos, new ChatHudLine.Visible(visible.addedTime(), beforeMediaMessageText, visible.indicator(), true));
+                }
+                if (!mediaMessage.isEmpty()) {
+                    OrderedText mediaMessageText = characterWithStyleToOrderedText(mediaMessage);
+                    visibleMessages.add(messagePos, new ChatHudLine.Visible(visible.addedTime(), mediaMessageText, visible.indicator(), true));
+                }
+                if (!afterMediaMessage.isEmpty()) {
+                    OrderedText afterMediaMessageText = characterWithStyleToOrderedText(afterMediaMessage);
+                    visibleMessages.add(messagePos, new ChatHudLine.Visible(visible.addedTime(), afterMediaMessageText, visible.indicator(), true));
+                }
+
+            } else {
+                LOGGER.error("Error formating media message");
+            }
+
+            // Remove the previously added null elements
+            visibleMessages.removeIf(Objects::isNull);
+        }
+    }
+
+    @Unique
+    private int getMessagePos(OrderedText text) {
+        for (int i = 0; i < visibleMessages.size(); ++i) {
+            ChatHudLine.Visible visible = visibleMessages.get(i);
+            if (visible.content() == text) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 
     @Unique
     private boolean isLowestMessage(OrderedText text) {
@@ -165,10 +249,17 @@ public abstract class ChatHudMixin {
     @Unique
     private void initMessageStructure(List<ChatHudLine.Visible> messageList, int currentMessagePos) {
         ChatHudLine.Visible currentMessage = messageList.get(currentMessagePos);
+        String currentMessageContent = OrderedTextToString(currentMessage.content());
+        Matcher matcher = Pattern.compile(getMediaMessageRegex()).matcher(currentMessageContent);
+        String mediaUrl = "https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png"; // default image
+        if (matcher.find()) {
+            mediaUrl = matcher.group(1);
+        }
         String messageChainId = randomStringGenerator.nextString();
         int lineCount = CONFIG.mediaChatHeight();
         if (lineCount >= 1) {
-            messageList.add(currentMessagePos+1, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTagValues(currentMessage.content(), Arrays.asList(MESSAGE_TAG.MessageID, MESSAGE_TAG.BufferGenerated), Arrays.asList(messageChainId, CONFIG.mediaChatHeight()+"")), currentMessage.indicator(), true));
+            OrderedText sanitizedText = StringToOrderedText(currentMessageContent.substring(CONFIG.startMediaUrl().length(), CONFIG.endMediaUrl().length())); // remove start and end media tag to prevent infinite loops
+            messageList.add(currentMessagePos+1, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTagValues(sanitizedText, Arrays.asList(MESSAGE_TAG.MessageID, MESSAGE_TAG.BufferGenerated), Arrays.asList(messageChainId, CONFIG.mediaChatHeight()+"")), currentMessage.indicator(), true));
             OrderedText message = addMessageTagValue("0", MESSAGE_TAG.MessageID, messageChainId);
             messageList.set(currentMessagePos, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTag(message, MESSAGE_TAG.Buffer), currentMessage.indicator(), false));
 
@@ -180,8 +271,7 @@ public abstract class ChatHudMixin {
             }
             // modify last message;
             message = addMessageTagValue(i-1+"", MESSAGE_TAG.MessageID, messageChainId);
-            messageList.set(currentMessagePos, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTagValue(message, MESSAGE_TAG.LowestOfBuffer, "https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png" +
-                    ""), currentMessage.indicator(), false));
+            messageList.set(currentMessagePos, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTagValue(message, MESSAGE_TAG.LowestOfBuffer, mediaUrl), currentMessage.indicator(), false));
         }
     }
 

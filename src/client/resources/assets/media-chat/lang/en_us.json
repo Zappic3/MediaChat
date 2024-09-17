@@ -1,13 +1,17 @@
 {
-  "text.config.media-chat-config.title" : "MediaChat Options",
-  "text.config.media-chat-config.option.mediaChatHeight" : "Media Chat Height",
-  "text.config.media-chat-config.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up",
-  "text.config.media-chat-config.option.maxMediaWidth" : "Media Max Width",
-  "text.config.media-chat-config.option.maxMediaWidth.tooltip" : "Determines the max. media width,\nrelative to your chat width",
-  "text.config.media-chat-config.category.debugOptions" : "Advanced / Debug Options",
-  "text.config.media-chat-config.option.debugOptions.renderImages" : "Render Chat Images",
-  "text.config.media-chat-config.option.debugOptions.renderHiddenChatMessages" : "Render Hidden Chat Messages",
-  "text.config.media-chat-config.option.debugOptions.displayScissorArea" : "Display Scissor Area",
-  "text.config.media-chat-config.option.debugOptions.useNameInsteadOfID" : "Name Instead of ID",
-  "text.config.media-chat-config.option.debugOptions.useNameInsteadOfID.tooltip" : "Uses the internal tag names\ninstead of the ID for\nchat tags"
+  "text.config.mediachat.title" : "MediaChat Options",
+  "text.config.mediachat.option.mediaChatHeight" : "Media Chat Height",
+  "text.config.mediachat.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up",
+  "text.config.mediachat.option.maxMediaWidth" : "Media Max Width",
+  "text.config.mediachat.option.maxMediaWidth.tooltip" : "Determines the max. media width,\nrelative to your chat width",
+  "text.config.mediachat.option.startMediaUrl" : "Media Start Marker",
+  "text.config.mediachat.option.startMediaUrl.tooltip" : "Must be entered in the Chat to mark the\nbeginning of a media element",
+  "text.config.mediachat.option.endMediaUrl" : "Media End marker",
+  "text.config.mediachat.option.endMediaUrl.tooltip" : "Must be entered in the Chat to mark the\nend of a media element",
+  "text.config.mediachat.category.debugOptions" : "Advanced / Debug Options",
+  "text.config.mediachat.option.debugOptions.renderImages" : "Render Chat Images",
+  "text.config.mediachat.option.debugOptions.renderHiddenChatMessages" : "Render Hidden Chat Messages",
+  "text.config.mediachat.option.debugOptions.displayScissorArea" : "Display Scissor Area",
+  "text.config.mediachat.option.debugOptions.useNameInsteadOfID" : "Name Instead of ID",
+  "text.config.mediachat.option.debugOptions.useNameInsteadOfID.tooltip" : "Uses the internal tag names\ninstead of the ID for\nchat tags"
 }
