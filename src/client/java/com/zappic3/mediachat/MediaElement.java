@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.nio.file.Files;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
+import static com.zappic3.mediachat.MediaChatClient.CONFIG;
 import static com.zappic3.mediachat.MediaChatClient.getModDataFolderPath;
 import static com.zappic3.mediachat.Utility.registerTexture;
 
@@ -60,8 +61,8 @@ public class MediaElement {
             connection.connect();
 
             String contentType = connection.getContentType();
-            int contentLength = connection.getContentLength(); // todo implement some sort of file size limit to prevent abuse
-            if (contentType.startsWith("image") && contentLength > 0) {
+            int contentLength = connection.getContentLength();
+            if (contentType.startsWith("image") && contentLength > 0 && contentLength <= CONFIG.maxMediaSize() * 1024 * 1024) {  // convert mb to byte
                 ImageInputStream imageStream = ImageIO.createImageInputStream(url.openStream());
 
                 Iterator<ImageReader> readers = ImageIO.getImageReaders(imageStream);

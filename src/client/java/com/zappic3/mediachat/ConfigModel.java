@@ -3,6 +3,9 @@ package com.zappic3.mediachat;
 import io.wispforest.owo.config.Option;
 import io.wispforest.owo.config.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Modmenu(modId = "media-chat")
 @Config(name = "mediachat", wrapperName = "MediaChatConfig")
 public class ConfigModel {
@@ -10,6 +13,11 @@ public class ConfigModel {
     public int mediaChatHeight = 5;
     @RangeConstraint(min = 0.1F, max = 1.0F)
     public float maxMediaWidth = 1.0F;
+
+    @PredicateConstraint("maxMediaSizePredicate")
+    public int maxMediaSize = 30;
+    public Boolean cacheMedia = false;
+    public int maxCacheSize = 200;
 
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
@@ -27,5 +35,9 @@ public class ConfigModel {
         public boolean displayScissorArea = false;
         @RestartRequired
         public boolean useNameInsteadOfID = false;
+    }
+
+    public static boolean maxMediaSizePredicate(int maxMediaSize) {
+        return maxMediaSize >0;
     }
 }
