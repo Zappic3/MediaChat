@@ -43,13 +43,13 @@ jobs:
       if: ${{ runner.os != 'Windows' }}
       run: chmod +x ./gradlew
 
-    - name: Build with Gradle Wrapper
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          gradlew.bat build
-        else
-          ./gradlew build
-        fi
+    - name: Build with Gradle (Windows)
+      if: runner.os == 'Windows'
+      run: gradlew.bat build
+
+    - name: Build with Gradle (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: ./gradlew build
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
     # If your project does not have the Gradle Wrapper configured, you can use the following configuration to run Gradle with a specified version.
