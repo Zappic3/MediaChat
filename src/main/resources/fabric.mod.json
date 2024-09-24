@@ -8,8 +8,9 @@
 		"Zappic3"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/Zappic3/MediaChat",
+		"sources": "https://github.com/Zappic3/MediaChat",
+		"issues": "https://github.com/Zappic3/MediaChat/issues"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/media-chat/icon.png",

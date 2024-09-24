@@ -17,6 +17,7 @@ repositories {
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
 	maven { url 'https://maven.wispforest.io/releases/' }
+	mavenCentral()
 }
 
 loom {
@@ -44,6 +45,11 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	include implementation("com.twelvemonkeys.imageio:imageio-core:${project.twelve_monkeys_version}")
+	include implementation("com.twelvemonkeys.imageio:imageio-jpeg:${project.twelve_monkeys_version}")
+	include implementation("com.twelvemonkeys.imageio:imageio-webp:${project.twelve_monkeys_version}")
+	include implementation("com.sksamuel.scrimage:scrimage-core:${project.scrimage_version}")
 
 	// dont use vulnerable log4j versions
 	constraints {

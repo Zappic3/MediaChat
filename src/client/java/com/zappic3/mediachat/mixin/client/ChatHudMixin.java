@@ -9,6 +9,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.Identifier;
@@ -224,7 +225,7 @@ public abstract class ChatHudMixin {
             }
 
             // Remove the previously added null elements
-            visibleMessages.removeIf(Objects::isNull);
+                visibleMessages.removeIf(Objects::isNull);
         }
     }
 
@@ -320,6 +321,7 @@ public abstract class ChatHudMixin {
         if (CONFIG.debugOptions.renderImages()) {
             context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
         }
+
         context.disableScissor();
 
         // Restore previous state

@@ -1,52 +1,71 @@
 package com.zappic3.mediachat;
 
+import com.sksamuel.scrimage.nio.AnimatedGif;
+import com.sksamuel.scrimage.nio.AnimatedGifReader;
+import com.sksamuel.scrimage.nio.ImageSource;
 import net.minecraft.util.Identifier;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URI;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.nio.file.Files;
+import com.sksamuel.scrimage.ImmutableImage;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.MediaChatClient.CONFIG;
-import static com.zappic3.mediachat.MediaChatClient.getModDataFolderPath;
 import static com.zappic3.mediachat.Utility.registerTexture;
 
 public class MediaElement {
     private static final Identifier MEDIA_LOADING =  Identifier.of("media-chat", "textures/media_loading.png");
     private static final Identifier MEDIA_UNSUPPORTED =  Identifier.of("media-chat", "textures/media_unsupported.png");
     private static final Identifier MEDIA_DOWNLOAD_FAILED =  Identifier.of("media-chat", "textures/media_download_failed.png");
+    private static final Identifier MEDIA_NOT_WHITELISTED =  Identifier.of("media-chat", "textures/media_not_whitelisted.png");
+
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
-    private final CompletableFuture<Void> loadFuture;
+    private  CompletableFuture<Void> loadFuture ;
     private final String _source;
-    private volatile Identifier _id;
+    private volatile List<Identifier> _ids = new ArrayList<>();
     private int _width;
     private int _height;
 
-    private MediaElement(String source, Identifier id) {
-        this._source = source;
-        this._id = MEDIA_LOADING;
-        this._width = 64;
-        this._height = 64;
+    // animated element support
+    private int _currentFrame = 0;
+    private volatile List<Long> _frameDelays = new ArrayList<>();
+    private boolean isAnimPlaying = false;
+    private long animPlayingStartTime = -1;
 
-        this.loadFuture = CompletableFuture.runAsync(() -> {
-            MediaIdentifierInfo mii = downloadMedia(source);
-            this.setId(mii.getId(), mii.getWidth(), mii.getHeight());
-        });
+    private MediaElement(String source, Identifier id) {
+        this(source, new ArrayList<>(List.of(id)));
+    }
+
+    private MediaElement(String source, List<Identifier> ids) {
+        this._source = source;
+        this._ids = ids;
+
+        if (source != null) {
+            this.setIdentifier(MEDIA_LOADING, 64, 64);
+            this.loadFuture = CompletableFuture.runAsync(() -> {
+                MediaIdentifierInfo mii = downloadMedia(source);
+                this.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height());
+                if (mii.delays != null) {
+                    this.isAnimPlaying = true;
+                }
+            });
+        }
+    }
+
+    public record MediaIdentifierInfo(List<Identifier> id, List<Long> delays, int width, int height) {
+        public MediaIdentifierInfo(Identifier id, int width, int height) {
+            this(List.of(id), null, width, height);
+        }
     }
 
     public static MediaElement of(String source) {
@@ -56,6 +75,29 @@ public class MediaElement {
     private static MediaIdentifierInfo downloadMedia(String source) {
         try {
             URL url = new URI(source).toURL();
+
+            if (CONFIG.useWhitelist()) {
+                boolean isWhitelisted = false;
+                String host = url.getHost();
+                if (host.startsWith("www.")) {
+                    host = host.substring(4);
+                }
+
+                for (String whitelistedDomain : CONFIG.whitelistedWebsites()) {
+                    if (whitelistedDomain.startsWith("www.")) {
+                        whitelistedDomain = whitelistedDomain.substring(4);
+                    }
+
+                    if (host.equals(whitelistedDomain) || host.endsWith("." + whitelistedDomain)) {
+                        isWhitelisted = true;
+                        break;
+                    }
+                }
+                if (!isWhitelisted) {
+                    return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 64, 64);
+                }
+            }
+
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("HEAD");
             connection.connect();
@@ -72,15 +114,50 @@ public class MediaElement {
                 }
 
                 ImageReader reader = readers.next();
-                String formatName = reader.getFormatName();
-                reader.setInput(imageStream);
-                BufferedImage image = reader.read(0);
-                imageStream.close();
-                // todo add option to save images to disk
+                String formatName = reader.getFormatName().toLowerCase();
 
-                if (image != null && image.getWidth() > 0 && image.getHeight() > 0) {
-                    Identifier id = registerTexture(image, source.hashCode()+"");
-                    return new MediaIdentifierInfo(id, image.getWidth(), image.getHeight());
+                List<BufferedImage> frames  = new ArrayList<>();
+                List<Long> delays = null;
+
+                // save in case it needs to be safed to disk
+                AnimatedGif gif = null;
+
+                switch (formatName) {
+                    case "gif":
+                        delays = new ArrayList<>();
+                        gif = AnimatedGifReader.read(ImageSource.of(imageInputStreamToInputStream(imageStream)));
+                        for (int i = 0; i < gif.getFrameCount(); i++) {
+                            ImmutableImage currentFrame = gif.getFrame(i);
+                            frames.add(i, currentFrame.toNewBufferedImage(currentFrame.getType()));
+                            delays.add(gif.getDelay(i).toMillis());
+                        }
+                        break;
+                    default:
+                        reader.setInput(imageStream);
+                        BufferedImage image = reader.read(0);
+                        frames.add(image);
+                }
+                imageStream.close();
+
+                if (!frames.isEmpty() && frames.getFirst().getWidth() > 0 && frames.getFirst().getHeight() > 0) {
+                    if (CONFIG.cacheMedia()) {
+                        switch (formatName) {
+                            case "gif":
+                                CacheManager.saveGifToCache(gif, source);
+                                break;
+                            default:
+                                CacheManager.saveMediaToCache(frames.getFirst(), source, formatName);
+                                break;
+                        }
+                    }
+                    List<Identifier> identifiers = new ArrayList<>();
+                    for (int i = 0; i < frames.size(); i++) {
+                        BufferedImage image = frames.get(i);
+                        Identifier id = registerTexture(image, source.hashCode()+"_"+i);
+                        identifiers.add(id);
+                    }
+
+                    return new MediaIdentifierInfo(identifiers, delays, frames.getFirst().getWidth(), frames.getFirst().getHeight());
                 } else {
                     return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
                 }
@@ -100,28 +177,80 @@ public class MediaElement {
         return new MediaIdentifierInfo(Identifier.of("media-chat", "textures/image.png"), 64, 64);
     }
 
+    private static InputStream imageInputStreamToInputStream(ImageInputStream imageStream) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = imageStream.read(buffer)) != -1) {
+            baos.write(buffer, 0, bytesRead);
+        }
+        return new ByteArrayInputStream(baos.toByteArray());
+    }
+
     // this is intended for loading media that was saved to disk on startup.
     public static void add(Identifier id, int hashCode, int width, int height) {
         MediaElement e = new MediaElement(null, id);
-        e.setId(id, width, height);
+        e.setIdentifier(id, width, height);
         _mediaPool.put(hashCode, e);
     }
 
-    public Identifier currentFrame() {
-        return _id;
+    public static void add(AnimatedGif gif, int hashCode) throws Exception {
+        List<Long> delays = new ArrayList<>();
+        List<Identifier> identifiers = new ArrayList<>();
+        for (int i = 0; i < gif.getFrameCount(); i++) {
+            ImmutableImage currentFrame = gif.getFrame(i);
+            BufferedImage image = currentFrame.toNewBufferedImage(currentFrame.getType());
+            Identifier id = registerTexture(image, hashCode+"_"+i);
+            identifiers.add(id);
+            delays.add(gif.getDelay(i).toMillis());
+        }
+
+        MediaElement e = new MediaElement(null, identifiers);
+        e.setIdentifier(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height);
+        _mediaPool.put(hashCode, e);
+
     }
 
-    public int width () {
+    public Identifier currentFrame() {
+        if (isAnimPlaying && _frameDelays != null) { determineCurrentFrame(); }
+        return _ids.get(_currentFrame);
+    }
+
+    private void determineCurrentFrame() {
+        long totalTime = animPlayingStartTime;
+        long currentTime = System.currentTimeMillis();
+        for (int i = 0; i < _frameDelays.size(); i++) {
+            totalTime += _frameDelays.get(i);
+            if (totalTime > currentTime) {
+                _currentFrame = i;
+                return;
+            }
+        }
+        animPlayingStartTime = currentTime;
+        _currentFrame = 0;
+    }
+
+    public int width() {
         return _width;
     }
 
-    public int height () {
+    public int height() {
         return _height;
     }
 
-    private void setId(Identifier id, int width, int height) {
-        this._id = id;
+    private void setIdentifier(Identifier id, int width, int height) {
+        List<Identifier> ids = new ArrayList<>();
+        ids.add(id);
+        this.setIdentifier(new ArrayList<>(List.of(id)), null, width, height);
+        this.isAnimPlaying = false;
+    }
+
+    private void setIdentifier(List<Identifier> ids, List<Long> delays, int width, int height) {
+        if (delays != null && ids.size() != delays.size()) {throw new IllegalArgumentException("Error setting MediaElement Identifier:\nThe 'ids' and 'delays' list must have the same size (or null)");}
+        this._ids = ids;
         this._width = width;
         this._height = height;
+        this._frameDelays = delays;
+        this.isAnimPlaying = true;
     }
 }

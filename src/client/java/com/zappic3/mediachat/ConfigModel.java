@@ -9,6 +9,7 @@ import java.util.List;
 @Modmenu(modId = "media-chat")
 @Config(name = "mediachat", wrapperName = "MediaChatConfig")
 public class ConfigModel {
+    @SectionHeader("generalOptions")
     @RangeConstraint(min = 3, max = 15)
     public int mediaChatHeight = 5;
     @RangeConstraint(min = 0.1F, max = 1.0F)
@@ -16,16 +17,28 @@ public class ConfigModel {
 
     @PredicateConstraint("maxMediaSizePredicate")
     public int maxMediaSize = 30;
+
     public Boolean cacheMedia = false;
+
     public int maxCacheSize = 200;
+
 
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String startMediaUrl = "[";
+
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String endMediaUrl = "]";
 
+    @SectionHeader("privacyOptions")
+    public boolean useWhitelist = false;
+
+    //@RegexConstraint("^(?!.*\\.\\.)(?!.*(^\\.|\\.$)).+?\\..+$")
+    @Hook
+    public List<String> whitelistedWebsites = new ArrayList<>(List.of("imgur.com", "i.redd.it")); // todo add constraints
+
+    @SectionHeader("debugOptions")
     @Nest
     public DebugOptions debugOptions = new DebugOptions();
 

@@ -30,7 +30,7 @@ public class Utility {
     private final static String MESSAGE_TAG_VALUE_REGEX = "#%s;([^#]+)"; // detect tags with tag value
     private final static String MESSAGE_TAG_REGEX = "#%s;[^#]*";         // detect any tag
 
-    private final static String DETECT_MEDIA_MESSAGE_REGEX = "((?:https?:\\/\\/)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_\\+.~#?&\\/\\/=]*)";
+    private final static String DETECT_MEDIA_MESSAGE_REGEX = "((?:https?:\\/\\/)?[-a-zA-Z0-9@:%._\\+~#=*]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_\\+.~#?&\\/\\/=*]*)";
 
     public enum MESSAGE_TAG {
         BufferGenerated,
@@ -156,15 +156,23 @@ public class Utility {
         return null;
     }
 
+    public static boolean isMouseInRegion(int regionX, int regionY, int regionWidth, int regionHeight) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        double mouseX = client.mouse.getX();
+        double mouseY = client.mouse.getY();
+
+        int scaledWidth = client.getWindow().getScaledWidth();
+        int scaledHeight = client.getWindow().getScaledHeight();
+
+        double scaledMouseX = mouseX * scaledWidth / client.getWindow().getWidth();
+        double scaledMouseY = mouseY * scaledHeight / client.getWindow().getHeight();
+
+        return (scaledMouseX >= regionX && scaledMouseX <= regionX + regionWidth) && (scaledMouseY >= regionY && scaledMouseY <= regionY + regionHeight);
+    }
+
     // #######################
     // Texture Loading
     // #######################
-    public static Identifier loadTextureFromPath(String filePath) throws Exception {
-        // Load the image file as a BufferedImage
-        File file = new File(filePath);
-        return registerTexture(ImageIO.read(file), file.getName());
-
-    }
 
     public static Identifier registerTexture(BufferedImage bufferedImage, String filenName) throws Exception {
         // Convert BufferedImage to InputStream for NativeImage
