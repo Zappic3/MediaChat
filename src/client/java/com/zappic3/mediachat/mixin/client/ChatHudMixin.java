@@ -194,14 +194,16 @@ public abstract class ChatHudMixin {
         List<RawTextCollector.CharacterWithStyle> concMsg = RawTextCollector.removeLeadingWhitespace(OrderedTextToCharacterWithStyle(visible.content()));
         List<Integer> toDelete = new ArrayList<>();
         toDelete.add(messagePos);
-        for (int i = messagePos-1; i >= 0; i--) {
-            OrderedText currentMsg = visibleMessages.get(i).content();
-            List<RawTextCollector.CharacterWithStyle> currentMsgAsChars = OrderedTextToCharacterWithStyle(currentMsg);
-            RawTextCollector.removeLeadingWhitespace(currentMsgAsChars);
-            concMsg.addAll(currentMsgAsChars);
-            toDelete.add(i);
-            if (OrderedTextToString(currentMsg).contains(CONFIG.endMediaUrl())) {
-                break;
+        if (!(RawTextCollector.convertToPlainString(concMsg).contains(CONFIG.endMediaUrl()))) {
+            for (int i = messagePos - 1; i >= 0; i--) {
+                OrderedText currentMsg = visibleMessages.get(i).content();
+                List<RawTextCollector.CharacterWithStyle> currentMsgAsChars = OrderedTextToCharacterWithStyle(currentMsg);
+                RawTextCollector.removeLeadingWhitespace(currentMsgAsChars);
+                concMsg.addAll(currentMsgAsChars);
+                toDelete.add(i);
+                if (OrderedTextToString(currentMsg).contains(CONFIG.endMediaUrl())) {
+                    break;
+                }
             }
         }
         // only proceed, if the string contains a valid mediaMessage
