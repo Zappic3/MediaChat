@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Mouse;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import com.zappic3.mediachat.MediaChatConfig;
@@ -30,6 +31,15 @@ import static com.zappic3.mediachat.Utility.registerTexture;
 public class MediaChatClient implements ClientModInitializer {
 	public static final MediaChatConfig CONFIG = MediaChatConfig.createAndLoad();
 
+	@Override
+	public void onInitializeClient() {
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+			registerConfigObserver();
+			registerCachedTextures();
+		});
+
+	}
+
 	public static Path getModDataFolderPath() {
 		Path folderPath = FabricLoader.getInstance().getGameDir().resolve("MediaChat");
         try {
@@ -48,13 +58,5 @@ public class MediaChatClient implements ClientModInitializer {
 			throw new RuntimeException(e);
 		}
 		return folderPath;
-	}
-
-	@Override
-	public void onInitializeClient() {
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-			registerConfigObserver();
-			registerCachedTextures();
-		});
 	}
 }

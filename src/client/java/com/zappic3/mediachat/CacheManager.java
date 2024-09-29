@@ -62,12 +62,12 @@ public class CacheManager {
         enforceCacheSizeLimit(file);
     }
 
+    // this method might not be necessary anymore
     public static void saveAnimatedMediaToCache(List<BufferedImage> images, List<Long> delays, String source, String formatName) throws IOException {
         Path folder = getModDataFolderPath("cache" + File.separator + source.hashCode());
         for (int i = 0; i < images.size(); i++) {
             File file = new File(folder.resolve(i + "." + formatName).toString());
             ImageIO.write(images.get(i), formatName, file);
-            // todo also save delays
         }
     }
 

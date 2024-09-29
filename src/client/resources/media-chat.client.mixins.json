@@ -3,7 +3,8 @@
   "package": "com.zappic3.mediachat.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ChatHudMixin"
+    "ChatHudMixin",
+    "MouseMixin"
   ],
   "injectors": {
     "defaultRequire": 1

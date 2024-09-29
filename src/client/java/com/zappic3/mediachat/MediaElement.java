@@ -3,6 +3,8 @@ package com.zappic3.mediachat;
 import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.sksamuel.scrimage.nio.AnimatedGifReader;
 import com.sksamuel.scrimage.nio.ImageSource;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.util.Identifier;
 
 import javax.imageio.ImageIO;
@@ -30,11 +32,14 @@ public class MediaElement {
     private static final Identifier MEDIA_NOT_WHITELISTED =  Identifier.of("media-chat", "textures/media_not_whitelisted.png");
 
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
+    private static MediaElement _hoveredMediaElement = null;
+
     private  CompletableFuture<Void> loadFuture ;
     private final String _source;
     private volatile List<Identifier> _ids = new ArrayList<>();
     private int _width;
     private int _height;
+    private String messageId;
 
     // animated element support
     private int _currentFrame = 0;
@@ -49,6 +54,7 @@ public class MediaElement {
     private MediaElement(String source, List<Identifier> ids) {
         this._source = source;
         this._ids = ids;
+        this.messageId = null;
 
         if (source != null) {
             this.setIdentifier(MEDIA_LOADING, 64, 64);
@@ -72,6 +78,7 @@ public class MediaElement {
         return _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
     }
 
+    // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private static MediaIdentifierInfo downloadMedia(String source) {
         try {
             URL url = new URI(source).toURL();
@@ -238,6 +245,25 @@ public class MediaElement {
         return _height;
     }
 
+    public String messageId() {
+        return this.messageId;
+    }
+
+    public void messageId(String id) {
+        this.messageId = id;
+    }
+
+    public static void hovered(MediaElement element) {
+        _hoveredMediaElement = element;
+    }
+
+    public static MediaElement hovered() {
+        if (!(MinecraftClient.getInstance().currentScreen instanceof ChatScreen)) {
+            _hoveredMediaElement = null;
+        }
+        return _hoveredMediaElement;
+    }
+
     private void setIdentifier(Identifier id, int width, int height) {
         List<Identifier> ids = new ArrayList<>();
         ids.add(id);
@@ -252,5 +278,11 @@ public class MediaElement {
         this._height = height;
         this._frameDelays = delays;
         this.isAnimPlaying = true;
+    }
+
+    public static void reactToMouseClick() {
+        if (hovered() != null) {
+            LOGGER.info("MediaElement pressed: " + hovered().messageId());
+        }
     }
 }

@@ -28,9 +28,11 @@ import java.util.regex.Pattern;
 import static com.zappic3.mediachat.MediaChatClient.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.Utility.*;
+import static com.zappic3.mediachat.Utility.MessageHasTagValue;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {
+    @Unique
     MinecraftClient client = MinecraftClient.getInstance();
 
     @Unique
@@ -49,12 +51,21 @@ public abstract class ChatHudMixin {
     @Shadow @Final
     private List<ChatHudLine> messages;
 
-    @Shadow public abstract int getHeight();
+    @Unique
+    private List<String> renderedMediaElements = new ArrayList<>();
 
     @Redirect(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
     public int drawTextWithShadow(DrawContext instance, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
         String plainMessage = OrderedTextToString(text);
+
+        // clear the currently hovered message if it's not currently visible
+        if (getLowestMessage().content().equals(text)) {
+            if (MediaElement.hovered() != null && !(renderedMediaElements.contains(MediaElement.hovered().messageId()))) {
+                MediaElement.hovered(null);
+            }
+            renderedMediaElements.clear();
+        }
 
         // if the message contains the media starting element, isolate the message
         if (plainMessage.contains(CONFIG.startMediaUrl()) && !MessageHasTag(text, MESSAGE_TAG.MessageID) && !isMediaMessage(plainMessage, true)) {
@@ -119,14 +130,13 @@ public abstract class ChatHudMixin {
 
         } else if (MessageHasTag(text, MESSAGE_TAG.LowestOfBuffer) || isLowestMessage(text)) {
             // render the image, if the current message is the lowest visible of the "message chain"
-
             String imageSource = "";
             int lineShift = 0;
 
             if (MessageHasTag(text, MESSAGE_TAG.LowestOfBuffer)) {
                 imageSource = getMessageTagValue(text, MESSAGE_TAG.LowestOfBuffer);
             } else {
-                OrderedText lowestVisibleMsg = visibleMessages.get(scrolledLines).content();
+                OrderedText lowestVisibleMsg = getLowestMessage().content();
                 String messageId = getMessageTagValue(lowestVisibleMsg, MESSAGE_TAG.MessageID);
                 for (int i = scrolledLines; i >= 0; i--) {
                     OrderedText currentMsg = visibleMessages.get(i).content();
@@ -142,11 +152,19 @@ public abstract class ChatHudMixin {
             int alpha = (color >> 24) & 0xFF;
             int y1 = y + calculateChatHeight(1);
             int y2 = y-calculateChatHeight(CONFIG.mediaChatHeight());
-
             MediaElement mediaElement = MediaElement.of(imageSource);
+            // set media element message tag value for later use
+            String messageId = mediaElement.messageId();
+            if (messageId == null) {
+                mediaElement.messageId(getMessageTagValue(text, MESSAGE_TAG.MessageID));
+            } else {
+                renderedMediaElements.add(messageId);
+            }
+
             float ySpace = Math.abs(y1-y2);
             float xSpace = client.inGameHud.getChatHud().getWidth() * CONFIG.maxMediaWidth();
-            renderTexture(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, alpha / 255.0F);
+            boolean textureHovered = renderTextureAndCheckIfHovered(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, 5, alpha / 255.0F);
+            updateHoveredStatus(mediaElement, textureHovered);
 
             if (CONFIG.debugOptions.renderHiddenChatMessages()) {
                 instance.drawTextWithShadow(textRenderer, text, x, y, color);
@@ -158,6 +176,16 @@ public abstract class ChatHudMixin {
             }
         }
         return 0;
+    }
+
+    @Unique
+    private void updateHoveredStatus(MediaElement element, boolean isHovered) {
+        MediaElement oldHoveredElement = MediaElement.hovered();
+        if (isHovered) {
+            MediaElement.hovered(element);
+        } else if (oldHoveredElement == element) {
+            MediaElement.hovered(null);
+        }
     }
 
     @Unique
@@ -240,10 +268,14 @@ public abstract class ChatHudMixin {
         return -1;
     }
 
-
     @Unique
     private boolean isLowestMessage(OrderedText text) {
-        return (visibleMessages.get(scrolledLines).content() == text) && (MessageHasTag(text, MESSAGE_TAG.MessageID));
+        return  (getLowestMessage().content() == text) && (MessageHasTag(text, MESSAGE_TAG.MessageID));
+    }
+
+    @Unique
+    private ChatHudLine.Visible getLowestMessage() {
+        return visibleMessages.get(scrolledLines);
     }
 
     // This method adds buffer chat lines and adds tags to messages
@@ -285,7 +317,8 @@ public abstract class ChatHudMixin {
     }
 
     @Unique
-    private void renderTexture(DrawContext context, MinecraftClient client,  Identifier texture, int x, int y, int width, int height, float maxWidth, float maxHeight, float opacity) {
+    private boolean renderTextureAndCheckIfHovered(DrawContext context, MinecraftClient client,  Identifier texture, int x, int y, int width, int height, float maxWidth, float maxHeight, float heightBuffer, float opacity) {
+        boolean isTextureHovered = false;
         int corrected_width = 4 * width;
         int corrected_height = 4 * height;
 
@@ -299,9 +332,10 @@ public abstract class ChatHudMixin {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, opacity);
 
         // position & scaling
-        matrices.translate(x, y, 1.0F);
+        int yWithBuffer = (int) (y + (heightBuffer / 2));
+        matrices.translate(x, yWithBuffer, 1.0F);
         float widthRatio = maxWidth / corrected_width;
-        float heightRatio =  maxHeight / corrected_height;
+        float heightRatio =  (maxHeight - heightBuffer) / corrected_height;
         float finalScaleFactor = Math.min(widthRatio, heightRatio);
         matrices.scale(finalScaleFactor, finalScaleFactor, 1.0F);
 
@@ -311,13 +345,42 @@ public abstract class ChatHudMixin {
         double chatScale = chatHud.getChatScale();
         int windowHeight = client.getWindow().getScaledHeight();
         int chatLineHeight = calculateChatHeight(1);
+
         int roundedChatHeight = MathHelper.floor(chatHeight / chatLineHeight) * chatLineHeight;
         int chatDistanceFromWindowBottom = 40;
         int ScissorY  = (int)(windowHeight - ((roundedChatHeight * chatScale) + chatDistanceFromWindowBottom));
 
-        // Draw texture
+        // ########################################################
+        // clamp numbers inside the chatbox
+        int relativeChatTopBorder = (int) ((ScissorY - yWithBuffer) / finalScaleFactor);
+        int relativeChatBottomBorder = (int) (((windowHeight-chatDistanceFromWindowBottom) - yWithBuffer) / finalScaleFactor);
+        int limitedTopBorderHeight = Math.max(0, relativeChatTopBorder);
+        int limitedBottomBorderHeight = Math.min(corrected_height, relativeChatBottomBorder);
+        // check mouse hovering
+        double mouseX = client.mouse.getX() * client.getWindow().getScaledWidth() / client.getWindow().getWidth();
+        double mouseY = client.mouse.getY() * client.getWindow().getScaledHeight() / client.getWindow().getHeight();
+        double inverseMouseX = (mouseX - x - 5) / finalScaleFactor;
+        double inverseMouseY = (mouseY - y) / finalScaleFactor;
+        boolean isHovered = inverseMouseX >= 0 && inverseMouseX <= corrected_width &&
+                inverseMouseY >= limitedTopBorderHeight && inverseMouseY <= limitedBottomBorderHeight;
+
+        if ((MinecraftClient.getInstance().currentScreen instanceof ChatScreen && isHovered)) {
+            int borderThickness = 30;
+            // border highlight lines
+            context.fill(0, limitedTopBorderHeight -borderThickness, -borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-left
+            context.fill(corrected_width, limitedTopBorderHeight -borderThickness, corrected_width+borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-right
+            context.fill(0, limitedTopBorderHeight, corrected_width, limitedTopBorderHeight -borderThickness, 0xFFFFFFFF); // x-top
+            context.fill(0, limitedBottomBorderHeight, corrected_width, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // x-bottom
+            isTextureHovered = true;
+
+        }
+        // ########################################################
+
+
         context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight-chatDistanceFromWindowBottom);
         if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
+
+        // draw image
         if (CONFIG.debugOptions.renderImages()) {
             context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
         }
@@ -328,5 +391,7 @@ public abstract class ChatHudMixin {
         RenderSystem.disableBlend();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         matrices.pop();
+
+        return isTextureHovered;
     }
 }
