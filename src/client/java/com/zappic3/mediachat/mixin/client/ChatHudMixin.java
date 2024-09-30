@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.zappic3.mediachat.MediaChatClient.CONFIG;
+import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.Utility.*;
 import static com.zappic3.mediachat.Utility.MessageHasTagValue;
@@ -367,7 +367,7 @@ public abstract class ChatHudMixin {
                 inverseMouseY >= limitedTopBorderHeight && inverseMouseY <= limitedBottomBorderHeight;
 
         if ((MinecraftClient.getInstance().currentScreen instanceof ChatScreen && isHovered)) {
-            int borderThickness = 30;
+            int borderThickness = (int) (2 / finalScaleFactor);
             // border highlight lines
             context.fill(0, limitedTopBorderHeight -borderThickness, -borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-left
             context.fill(corrected_width, limitedTopBorderHeight -borderThickness, corrected_width+borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-right
