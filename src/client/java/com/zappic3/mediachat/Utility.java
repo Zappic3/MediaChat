@@ -21,7 +21,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.zappic3.mediachat.MediaChatClient.CONFIG;
+import static com.zappic3.mediachat.MediaChat.CONFIG;
+import static com.zappic3.mediachat.MediaChat.MOD_ID;
 
 public class Utility {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -187,7 +188,7 @@ public class Utility {
         NativeImageBackedTexture texture = new NativeImageBackedTexture(nativeImage);
 
         // Generate a valid Identifier for the texture (this part can be a unique mod-generated name)
-        Identifier textureId = Identifier.of("media-chat", "textures/dynamic/" + filenName.toLowerCase().replace(" ", "_"));
+        Identifier textureId = Identifier.of(MOD_ID, "textures/dynamic/" + filenName.toLowerCase().replace(" ", "_"));
 
         // Register the texture in the Minecraft texture manager
         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);

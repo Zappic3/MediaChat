@@ -32,8 +32,14 @@ public class ConfigModel {
     public String endMediaUrl = "]";
 
     @SectionHeader("privacyOptions")
-    public boolean useWhitelist = false;
+    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    public serverMediaNetworkingMode serverNetworkingMode = serverMediaNetworkingMode.FILES_ONLY;
 
+    public boolean confirmUploadPopup = true;
+
+    public FileSharingServiceEnum hostingService = FileSharingServiceEnum.FILEBIN_NET;
+
+    public boolean useWhitelist = false;
     //@RegexConstraint("^(?!.*\\.\\.)(?!.*(^\\.|\\.$)).+?\\..+$")
     @Hook
     public List<String> whitelistedWebsites = new ArrayList<>(List.of("imgur.com", "i.redd.it")); // todo add constraints
@@ -52,5 +58,16 @@ public class ConfigModel {
 
     public static boolean maxMediaSizePredicate(int maxMediaSize) {
         return maxMediaSize >0;
+    }
+
+    // NONE: clients download everything, files cant be directly shared through the server
+    // FILES_ONLY: clients download media shared via url but files get uploaded to the server and distributed among clients
+    // ALL: everything is downloaded by the server and distributed to the clients
+    public enum serverMediaNetworkingMode {
+        NONE, FILES_ONLY, ALL
+    }
+
+    public enum FileSharingServiceEnum {
+        FILEBIN_NET
     }
 }

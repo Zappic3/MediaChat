@@ -1,0 +1,40 @@
+<owo-ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/wisp-forest/owo-lib/1.20/owo-ui.xsd">
+    <components>
+        <flow-layout direction="vertical">
+            <children>
+                <label>
+                    <text>This Server doesnt allow file uploading.</text>
+                </label>
+                <label>
+                    <text>Upload the files to Imgur to share them instead?</text>
+                </label>
+                <flow-layout direction="horizontal">
+                    <children>
+                        <button id="yes_button">
+                            <text>Yes</text>
+                        </button>
+                        <button id="no_button">
+                            <text>No</text>
+                        </button>
+                    </children>
+
+                    <horizontal-alignment>center</horizontal-alignment>
+                    <vertical-alignment>center</vertical-alignment>
+
+                    <padding>
+                        <all>10</all>
+                    </padding>
+
+                </flow-layout>
+            </children>
+
+            <vertical-alignment>center</vertical-alignment>
+            <horizontal-alignment>center</horizontal-alignment>
+
+            <surface>
+                <vanilla-translucent/>
+            </surface>
+        </flow-layout>
+    </components>
+</owo-ui>

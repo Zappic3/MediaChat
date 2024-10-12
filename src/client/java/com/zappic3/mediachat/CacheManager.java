@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
-import static com.zappic3.mediachat.MediaChatClient.CONFIG;
+import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChatClient.getModDataFolderPath;
 import static com.zappic3.mediachat.Utility.registerTexture;
 
@@ -71,6 +71,7 @@ public class CacheManager {
         }
     }
 
+    //todo: the same gif gets saved with different names. something with the hash must be wrong
     public static void saveGifToCache(AnimatedGif gif, String source) throws IOException {
         String filePath = getModDataFolderPath("cache") + File.separator + source.hashCode() + ".gif";
         GifSequenceWriter writer = new GifSequenceWriter(gif.getDelay(0).toMillis(), true);

@@ -318,6 +318,7 @@ public abstract class ChatHudMixin {
         return (int) ((chatLineSpacing + lineHeight) * numberOfLines);
     }
 
+    // todo: find out why images with transparency lose quality on hover. Example: https://cdn.pixabay.com/photo/2017/09/01/00/15/png-2702691_1280.png
     @Unique
     private boolean renderTextureAndCheckIfHovered(DrawContext context, MinecraftClient client,  Identifier texture, int x, int y, int width, int height, float maxWidth, float maxHeight, float heightBuffer, float opacity) {
         boolean isTextureHovered = false;

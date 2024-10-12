@@ -9,7 +9,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 
-import static com.zappic3.mediachat.MediaChatClient.CONFIG;
+import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
 public class ConfigControls {
