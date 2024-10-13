@@ -1,5 +1,8 @@
 package com.zappic3.mediachat.filesharing;
 
+import net.minecraft.client.resource.language.I18n;
+import net.minecraft.text.Text;
+
 import javax.imageio.stream.ImageInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -41,7 +44,7 @@ public abstract class FileSharingService {
         if (isUrlWhitelisted(url)) {
             return download(url);
         }
-        return new DownloadedMedia(DownloadedMedia.DownloadError.WHITELIST);
+        return new DownloadedMedia(DownloadedMedia.DownloadError.WHITELIST, I18n.translate("text.mediachat.media.tooltip.whitelistError"));
     }
 
     abstract public CompletableFuture<URL> upload(Path filePath);

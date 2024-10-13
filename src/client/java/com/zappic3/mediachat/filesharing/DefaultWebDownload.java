@@ -4,6 +4,8 @@ import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.sksamuel.scrimage.nio.AnimatedGifReader;
 import com.sksamuel.scrimage.nio.ImageSource;
+import net.minecraft.client.resource.language.I18n;
+import net.minecraft.text.Text;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -42,7 +44,7 @@ public class DefaultWebDownload extends FileSharingService{
                 Iterator<ImageReader> readers = ImageIO.getImageReaders(imageStream);
                 if (!readers.hasNext()) {
                     imageStream.close();
-                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
+                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, Text.translatable("text.mediachat.media.tooltip.formatError").toString());
                 }
 
                 ImageReader reader = readers.next();
@@ -81,19 +83,19 @@ public class DefaultWebDownload extends FileSharingService{
                         }
                     }
                 } else {
-                    return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
+                    return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, I18n.translate("text.mediachat.media.tooltip.genericError"));
                 }
 
             } else {
                 if (!contentType.startsWith("image")) {
-                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
+                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError"));
                 }
-                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE);
+                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, I18n.translate("text.media.tooltip.sizeError", CONFIG.maxMediaSize()+"mb", ((contentLength/1024)/1024)+"mb"));
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
-            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
+            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, e.getMessage());
         }
-        return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
+        return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, I18n.translate("text.mediachat.media.tooltip.genericError"));
     }
 }

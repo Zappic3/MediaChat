@@ -15,8 +15,8 @@ public class DownloadedGif extends DownloadedMedia {
         _originalGif = originalGif;
     }
 
-    public DownloadedGif(DownloadedMedia.DownloadError error) {
-        super(error);
+    public DownloadedGif(DownloadedMedia.DownloadError error, String errorMessage) {
+        super(error, errorMessage);
         _delays = null;
         _originalGif = null;
     }

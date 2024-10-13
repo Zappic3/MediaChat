@@ -1,21 +1,19 @@
 package com.zappic3.mediachat;
 
 import com.sksamuel.scrimage.nio.AnimatedGif;
-import com.sksamuel.scrimage.nio.AnimatedGifReader;
-import com.sksamuel.scrimage.nio.ImageSource;
 import com.zappic3.mediachat.filesharing.DownloadedGif;
 import com.zappic3.mediachat.filesharing.DownloadedMedia;
 import com.zappic3.mediachat.filesharing.FileSharingService;
+import com.zappic3.mediachat.ui.MediaViewScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.resource.language.I18n;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URI;
 import java.util.*;
@@ -39,11 +37,12 @@ public class MediaElement {
     private static MediaElement _hoveredMediaElement = null;
 
     private  CompletableFuture<Void> loadFuture ;
-    private final String _source;
+    private String _source;
     private volatile List<Identifier> _ids = new ArrayList<>();
     private int _width;
     private int _height;
-    private String messageId;
+    private String _messageId;
+    private String _errorMessage;
 
     // animated element support
     private int _currentFrame = 0;
@@ -58,7 +57,8 @@ public class MediaElement {
     private MediaElement(String source, List<Identifier> ids) {
         this._source = source;
         this._ids = ids;
-        this.messageId = null;
+        this._messageId = null;
+        this._errorMessage = null;
 
         if (source != null) {
             this.setIdentifier(MEDIA_LOADING, 64, 64);
@@ -86,11 +86,15 @@ public class MediaElement {
     }
 
     public static MediaElement of(String source) {
-        return _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
+        MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
+        if (element._source == null) { // this is useful to add a source to images loaded from cache
+            element._source = source;
+        }
+        return element;
     }
 
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
-    private static MediaIdentifierInfo downloadMedia(String source) {
+    private MediaIdentifierInfo downloadMedia(String source) {
         try {
             URL url = new URI(source).toURL();
 
@@ -127,6 +131,7 @@ public class MediaElement {
                     return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
                 }
             } else if (downloadedMedia != null) {
+                _errorMessage = downloadedMedia.getErrorMessage();
                 switch (downloadedMedia.getDownloadError()) {
                     case FORMAT -> {
                         return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 64, 64);
@@ -142,14 +147,17 @@ public class MediaElement {
                     }
                 }
             } else {
+                _errorMessage = I18n.translate("text.mediachat.media.tooltip.genericError");
                 return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
             }
 
         } catch (IOException e) {
             // handle IOException
             LOGGER.error("Error Downloading Image: \n"+e.getMessage());
+            setErrorMessage("Error Downloading Image: \n"+e.getMessage());
         } catch (Exception e) {
             LOGGER.error("Error while registering image: \n" + e.getMessage());
+            setErrorMessage("Error while registering image: \n"+e.getMessage());
         }
         return new MediaIdentifierInfo(Identifier.of(MOD_ID, "textures/image.png"), 64, 64);
     }
@@ -177,7 +185,10 @@ public class MediaElement {
         MediaElement e = new MediaElement(null, identifiers);
         e.setIdentifier(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height);
         _mediaPool.put(hashCode, e);
+    }
 
+    public void setErrorMessage(String errorMessage) {
+        _errorMessage = errorMessage;
     }
 
     public Identifier currentFrame() {
@@ -208,11 +219,11 @@ public class MediaElement {
     }
 
     public String messageId() {
-        return this.messageId;
+        return this._messageId;
     }
 
     public void messageId(String id) {
-        this.messageId = id;
+        this._messageId = id;
     }
 
     public static void hovered(MediaElement element) {
@@ -245,6 +256,33 @@ public class MediaElement {
     public static void reactToMouseClick() {
         if (hovered() != null) {
             LOGGER.info("MediaElement pressed: " + hovered().messageId());
+            MinecraftClient.getInstance().setScreen(new MediaViewScreen(hovered()));
+        }
+    }
+
+    public Text getTooltip() {
+        StringBuilder tooltip = new StringBuilder();
+        if (_errorMessage != null) {
+            tooltip.append("§4Error:§c ").append(_errorMessage).append("\n");
+        }
+        tooltip.append("§eSource:§b ").append((_source!=null ? _source : "Local Cache")).append("\n");
+
+        // todo actually implement these keybinds
+        String keybinds = "§7<Leftclick>§8 open image\n" +
+                "§7<Rightclick>§8 copy URL\n" +
+                "§7<Shift+Leftclick>§8 reload Image\n" +
+                "§7<Shift+Rightclick>§8 Insert URL";
+        tooltip.append(keybinds);
+        return Text.of(tooltip.toString());
+    }
+
+
+    public static void renderTooltip() {
+        if (hovered() != null) {
+            Screen currentScreen = MinecraftClient.getInstance().currentScreen;
+            if (currentScreen instanceof ChatScreen chatScreen) {
+                chatScreen.setTooltip(hovered().getTooltip());
+            }
         }
     }
 }

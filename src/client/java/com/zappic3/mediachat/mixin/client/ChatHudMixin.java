@@ -183,6 +183,7 @@ public abstract class ChatHudMixin {
         MediaElement oldHoveredElement = MediaElement.hovered();
         if (isHovered) {
             MediaElement.hovered(element);
+            MediaElement.renderTooltip();
         } else if (oldHoveredElement == element) {
             MediaElement.hovered(null);
         }

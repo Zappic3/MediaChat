@@ -5,13 +5,12 @@ import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.sksamuel.scrimage.nio.AnimatedGifReader;
 import com.sksamuel.scrimage.nio.ImageSource;
 import com.zappic3.mediachat.RandomString;
+import net.minecraft.client.resource.language.I18n;
+import net.minecraft.text.Text;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -90,7 +89,7 @@ public class FilebinService extends FileSharingService {
             HttpResponse<InputStream> filebinResponse = client.send(filebinRequest, HttpResponse.BodyHandlers.ofInputStream());
 
             if (filebinResponse.statusCode() != 302) {
-                return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
+                return new DownloadedMedia(DownloadedMedia.DownloadError.API, I18n.translate("text.mediachat.media.tooltip.apiError", "filebin.net", filebinResponse.statusCode()));
             }
 
             // download the actual file
@@ -114,15 +113,13 @@ public class FilebinService extends FileSharingService {
             // todo: check for http codes (403, 404)
             String contentType = mediaResponse.headers().firstValue("Content-Type").orElse("");
             if (!contentType.startsWith("image/")) {
-                LOGGER.info("1");
                 client.shutdown();
-                return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
+                return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError") + " (" + contentType + ")");
             }
 
             long contentLength = mediaResponse.headers().firstValueAsLong("Content-Length").orElse(-1L);
             if (contentLength == -1L || contentLength > (long) CONFIG.maxMediaSize() * 1024 * 1024) {
-                LOGGER.info("2");
-                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE);
+                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, I18n.translate("text.media.tooltip.sizeError", CONFIG.maxMediaSize()+"mb", ((contentLength/1024)/1024) + "mb"));
             }
 
             try (InputStream inputStream = mediaResponse.body();
@@ -130,8 +127,7 @@ public class FilebinService extends FileSharingService {
 
                 Iterator<ImageReader> readers = ImageIO.getImageReadersByMIMEType(contentType);
                 if (!readers.hasNext()) {
-                    LOGGER.info("3");
-                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
+                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError"));
                 }
                 ImageReader reader = readers.next();
                 String format = reader.getFormatName().toLowerCase();
@@ -147,20 +143,17 @@ public class FilebinService extends FileSharingService {
                         frames.add(i, currentFrame.toNewBufferedImage(currentFrame.getType()));
                         delays.add(gif.getDelay(i).toMillis());
                     }
-                    LOGGER.info("4");
                     return new DownloadedGif(frames, delays, gif);
                 }
 
                 reader.setInput(imageInputStream);
                 BufferedImage image = reader.read(0);
 
-                LOGGER.info("5");
                 return new DownloadedMedia(image, reader.getFormatName().toLowerCase());
 
             }
         } catch (Exception e) {
-            LOGGER.info("6");
-            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
+            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, e.getMessage());
         } finally {
             client.shutdown();
         }

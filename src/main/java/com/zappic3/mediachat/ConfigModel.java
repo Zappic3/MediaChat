@@ -37,7 +37,7 @@ public class ConfigModel {
 
     public boolean confirmUploadPopup = true;
 
-    public FileSharingServiceEnum hostingService = FileSharingServiceEnum.FILEBIN_NET;
+    public fileSharingServiceEnum hostingService = fileSharingServiceEnum.FILEBIN_NET;
 
     public boolean useWhitelist = false;
     //@RegexConstraint("^(?!.*\\.\\.)(?!.*(^\\.|\\.$)).+?\\..+$")
@@ -67,7 +67,7 @@ public class ConfigModel {
         NONE, FILES_ONLY, ALL
     }
 
-    public enum FileSharingServiceEnum {
+    public enum fileSharingServiceEnum {
         FILEBIN_NET
     }
 }
