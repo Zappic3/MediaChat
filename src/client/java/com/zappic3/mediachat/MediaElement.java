@@ -9,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.util.Clipboard;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -87,7 +88,7 @@ public class MediaElement {
 
     public static MediaElement of(String source) {
         MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
-        if (element._source == null) { // this is useful to add a source to images loaded from cache
+        if (element._source == null) { // this is useful to add a source to images loaded from local cache
             element._source = source;
         }
         return element;
@@ -253,10 +254,15 @@ public class MediaElement {
         this.isAnimPlaying = true;
     }
 
-    public static void reactToMouseClick() {
-        if (hovered() != null) {
-            LOGGER.info("MediaElement pressed: " + hovered().messageId());
-            MinecraftClient.getInstance().setScreen(new MediaViewScreen(hovered()));
+    public static void reactToMouseClick(int button, int action) {
+        LOGGER.info("action: "+action + " button: "+button);
+        MediaElement hovered = hovered();
+        if (hovered != null) {
+            if (button == 0 && action == 1) {
+                MinecraftClient.getInstance().setScreen(new MediaViewScreen(hovered()));
+            } else if (button == 1 && action == 1) {
+                MinecraftClient.getInstance().keyboard.setClipboard(hovered._source);
+            }
         }
     }
 
