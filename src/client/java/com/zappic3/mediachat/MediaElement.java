@@ -9,7 +9,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.Clipboard;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -39,10 +38,10 @@ public class MediaElement {
 
     private  CompletableFuture<Void> loadFuture ;
     private String _source;
-    private volatile List<Identifier> _ids = new ArrayList<>();
+    private volatile List<Identifier> _identifier = new ArrayList<>();
     private int _width;
     private int _height;
-    private String _messageId;
+    private final UUID _elementId;
     private String _errorMessage;
 
     // animated element support
@@ -57,8 +56,8 @@ public class MediaElement {
 
     private MediaElement(String source, List<Identifier> ids) {
         this._source = source;
-        this._ids = ids;
-        this._messageId = null;
+        this._identifier = ids;
+        this._elementId = UUID.randomUUID();
         this._errorMessage = null;
 
         if (source != null) {
@@ -86,13 +85,19 @@ public class MediaElement {
         }
     }
 
-    public static MediaElement of(String source) {
+    public static MediaElement of(String source, boolean dontSaveToCache) {
         MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
         if (element._source == null) { // this is useful to add a source to images loaded from local cache
             element._source = source;
         }
         return element;
     }
+
+    public static MediaElement of(String source) {
+        return of(source, false);
+    }
+
+
 
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private MediaIdentifierInfo downloadMedia(String source) {
@@ -194,7 +199,7 @@ public class MediaElement {
 
     public Identifier currentFrame() {
         if (isAnimPlaying && _frameDelays != null) { determineCurrentFrame(); }
-        return _ids.get(_currentFrame);
+        return _identifier.get(_currentFrame);
     }
 
     private void determineCurrentFrame() {
@@ -219,12 +224,12 @@ public class MediaElement {
         return _height;
     }
 
-    public String messageId() {
-        return this._messageId;
+    public String source() {
+        return _source;
     }
 
-    public void messageId(String id) {
-        this._messageId = id;
+    public UUID elementId() {
+        return _elementId;
     }
 
     public static void hovered(MediaElement element) {
@@ -247,7 +252,7 @@ public class MediaElement {
 
     private void setIdentifier(List<Identifier> ids, List<Long> delays, int width, int height) {
         if (delays != null && ids.size() != delays.size()) {throw new IllegalArgumentException("Error setting MediaElement Identifier:\nThe 'ids' and 'delays' list must have the same size (or null)");}
-        this._ids = ids;
+        this._identifier = ids;
         this._width = width;
         this._height = height;
         this._frameDelays = delays;
@@ -255,13 +260,17 @@ public class MediaElement {
     }
 
     public static void reactToMouseClick(int button, int action) {
-        LOGGER.info("action: "+action + " button: "+button);
+        MinecraftClient client = MinecraftClient.getInstance();
         MediaElement hovered = hovered();
         if (hovered != null) {
             if (button == 0 && action == 1) {
-                MinecraftClient.getInstance().setScreen(new MediaViewScreen(hovered()));
+                client.setScreen(new MediaViewScreen(hovered()));
             } else if (button == 1 && action == 1) {
-                MinecraftClient.getInstance().keyboard.setClipboard(hovered._source);
+                if (Screen.hasShiftDown()) {
+                    Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + hovered.source() + CONFIG.endMediaUrl());
+                } else {
+                    MinecraftClient.getInstance().keyboard.setClipboard(hovered.source());
+                }
             }
         }
     }

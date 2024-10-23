@@ -14,6 +14,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,20 +53,29 @@ public abstract class ChatHudMixin {
     private List<ChatHudLine> messages;
 
     @Unique
-    private List<String> renderedMediaElements = new ArrayList<>();
+    private List<UUID> renderedMediaElements = new ArrayList<>();
+    @Unique
+    private boolean hasRenderedMediaElement = false;
 
     @Redirect(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
     public int drawTextWithShadow(DrawContext instance, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
         String plainMessage = OrderedTextToString(text);
 
-        // clear the currently hovered message if it's not currently visible
-        if (getLowestMessage().content().equals(text)) {
-            if (MediaElement.hovered() != null && !(renderedMediaElements.contains(MediaElement.hovered().messageId()))) {
+        // clear the currently hovered message if it's not currently visible (aka it didn't render this cycle)
+        if (getLowestMessage().content().equals(text)) { // the if statement checks that this is the last message being rendered, so that this will only run once every render-cycle
+            if (MediaElement.hovered() != null && !(renderedMediaElements.contains(MediaElement.hovered().elementId()))) {
                 MediaElement.hovered(null);
             }
             renderedMediaElements.clear();
+            // clear the current hovered message, if no message is being hovered
+            if (!hasRenderedMediaElement && MediaElement.hovered() != null) {
+                MediaElement.hovered(null);
+            }
+            hasRenderedMediaElement = false;
         }
+
+
 
         // if the message contains the media starting element, isolate the message
         if (plainMessage.contains(CONFIG.startMediaUrl()) && !MessageHasTag(text, MESSAGE_TAG.MessageID) && !isMediaMessage(plainMessage, true)) {
@@ -154,12 +164,7 @@ public abstract class ChatHudMixin {
             int y2 = y-calculateChatHeight(CONFIG.mediaChatHeight());
             MediaElement mediaElement = MediaElement.of(imageSource);
             // set media element message tag value for later use
-            String messageId = mediaElement.messageId();
-            if (messageId == null) {
-                mediaElement.messageId(getMessageTagValue(text, MESSAGE_TAG.MessageID));
-            } else {
-                renderedMediaElements.add(messageId);
-            }
+            renderedMediaElements.add(mediaElement.elementId());
 
             float ySpace = Math.abs(y1-y2);
             float xSpace = client.inGameHud.getChatHud().getWidth() * CONFIG.maxMediaWidth();
@@ -180,12 +185,10 @@ public abstract class ChatHudMixin {
 
     @Unique
     private void updateHoveredStatus(MediaElement element, boolean isHovered) {
-        MediaElement oldHoveredElement = MediaElement.hovered();
         if (isHovered) {
+            hasRenderedMediaElement = true;
             MediaElement.hovered(element);
             MediaElement.renderTooltip();
-        } else if (oldHoveredElement == element) {
-            MediaElement.hovered(null);
         }
     }
 
