@@ -58,7 +58,7 @@ public class FilebinService extends FileSharingService {
 
                 if (response.statusCode() == 201) {
                     LOGGER.info(response.body());
-                    return new URL("https://filebin.net/"+bucketName+"/"+fileName);
+                    return URI.create("https://filebin.net/"+bucketName+"/"+fileName).toURL();
                 } else {
                     LOGGER.warn("Error uploading file to Filebin.net:\n{}", response.statusCode());
                     // todo: retry upload on fail
