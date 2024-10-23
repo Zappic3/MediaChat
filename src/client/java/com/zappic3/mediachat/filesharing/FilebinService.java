@@ -6,7 +6,6 @@ import com.sksamuel.scrimage.nio.AnimatedGifReader;
 import com.sksamuel.scrimage.nio.ImageSource;
 import com.zappic3.mediachat.RandomString;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.text.Text;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
@@ -29,9 +28,9 @@ import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
 public class FilebinService extends FileSharingService {
-    private RandomString randomString;
-    private String bucketName;
-    private String userId;
+    private final RandomString randomString;
+    private final String bucketName;
+    private final String userId;
 
     public FilebinService() {
         randomString = new RandomString(20);
@@ -67,7 +66,7 @@ public class FilebinService extends FileSharingService {
 
             } catch (Exception e) {
                 LOGGER.error("Error uploading file to Filebin.net:\n{}", e.getMessage());
-                e.printStackTrace();
+                LOGGER.error(e.getMessage(), e);
             }
             return null;
         });
@@ -95,7 +94,7 @@ public class FilebinService extends FileSharingService {
             // download the actual file
             URI fileLocation = new URI(filebinResponse.headers().firstValue("location").orElse(""));
 
-            LOGGER.info("Location: "+fileLocation);
+            LOGGER.info("Location: {}", fileLocation);
 
             HttpRequest mediaRequest = HttpRequest.newBuilder()
                 .uri(fileLocation)
@@ -107,8 +106,7 @@ public class FilebinService extends FileSharingService {
             HttpResponse<InputStream> mediaResponse = client.send(mediaRequest, HttpResponse.BodyHandlers.ofInputStream());
 
 
-            
-            LOGGER.info("Media Header: "+mediaResponse.headers().toString());
+            LOGGER.info("Media Header: {}", mediaResponse.headers().toString());
 
             // todo: check for http codes (403, 404)
             String contentType = mediaResponse.headers().firstValue("Content-Type").orElse("");
