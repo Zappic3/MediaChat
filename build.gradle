@@ -51,6 +51,8 @@ dependencies {
 	include implementation("com.twelvemonkeys.imageio:imageio-webp:${project.twelve_monkeys_version}")
 	include implementation("com.sksamuel.scrimage:scrimage-core:${project.scrimage_version}")
 
+	implementation 'com.google.code.gson:gson:2.11.0'
+
 	// dont use vulnerable log4j versions
 	constraints {
 		implementation("org.apache.logging.log4j:log4j-core") {
@@ -73,6 +75,7 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
+	options.compilerArgs << "-Xlint:deprecation"
 }
 
 java {

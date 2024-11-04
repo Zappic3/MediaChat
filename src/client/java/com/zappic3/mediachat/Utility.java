@@ -1,8 +1,11 @@
 package com.zappic3.mediachat;
 
 import com.mojang.logging.LogUtils;
+import com.zappic3.mediachat.mixin.client.ChatScreenAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.OrderedText;
@@ -169,6 +172,16 @@ public class Utility {
         double scaledMouseY = mouseY * scaledHeight / client.getWindow().getHeight();
 
         return (scaledMouseX >= regionX && scaledMouseX <= regionX + regionWidth) && (scaledMouseY >= regionY && scaledMouseY <= regionY + regionHeight);
+    }
+
+    public static void insertStringAtCursorPos(String text) {
+        if (MinecraftClient.getInstance().currentScreen instanceof ChatScreen screen) {
+            TextFieldWidget chatField = ((ChatScreenAccessor) screen).getChatField();
+            int oldCursorPos = chatField.getCursor();
+            String oldText = chatField.getText();
+            chatField.setText(oldText.substring(0, oldCursorPos) + text + oldText.substring(oldCursorPos));
+            chatField.setCursor(oldCursorPos + text.length(), false);
+        }
     }
 
     // #######################

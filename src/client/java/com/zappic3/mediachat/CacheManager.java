@@ -24,6 +24,7 @@ public class CacheManager {
     private CacheManager() {}
 
     public static void registerCachedTextures() {
+        LOGGER.info("Registering textures from cache (if this takes a long time, reduce your cache size)");
         File folder = new File(getModDataFolderPath("cache").toUri());
         File[] filesArray = folder.listFiles();
 

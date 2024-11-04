@@ -44,6 +44,8 @@ public class ConfigModel {
     @Hook
     public List<String> whitelistedWebsites = new ArrayList<>(List.of("imgur.com", "i.redd.it")); // todo add constraints
 
+    public String tenorApiKey = "";
+
     @SectionHeader("debugOptions")
     @Nest
     public DebugOptions debugOptions = new DebugOptions();

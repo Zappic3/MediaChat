@@ -51,10 +51,18 @@ public class MediaElement {
     private long animPlayingStartTime = -1;
 
     private MediaElement(String source, Identifier id) {
-        this(source, new ArrayList<>(List.of(id)));
+        this(source, new ArrayList<>(List.of(id)), true);
+    }
+
+    private MediaElement(String source, Identifier id, boolean saveToCache) {
+        this(source, new ArrayList<>(List.of(id)), saveToCache);
     }
 
     private MediaElement(String source, List<Identifier> ids) {
+        this(source, ids, true);
+    }
+
+    private MediaElement(String source, List<Identifier> ids, boolean saveToCache) {
         this._source = source;
         this._identifier = ids;
         this._elementId = UUID.randomUUID();
@@ -64,7 +72,7 @@ public class MediaElement {
             this.setIdentifier(MEDIA_LOADING, 64, 64);
             this.loadFuture = CompletableFuture.runAsync(() -> {
                 try {
-                    MediaIdentifierInfo mii = downloadMedia(source);
+                    MediaIdentifierInfo mii = downloadMedia(source, saveToCache);
                     this.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height());
                     if (mii.delays != null) {
                         this.isAnimPlaying = true;
@@ -85,8 +93,8 @@ public class MediaElement {
         }
     }
 
-    public static MediaElement of(String source, boolean dontSaveToCache) {
-        MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING));
+    public static MediaElement of(String source, boolean saveToCache) {
+        MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING, saveToCache));
         if (element._source == null) { // this is useful to add a source to images loaded from local cache
             element._source = source;
         }
@@ -94,13 +102,11 @@ public class MediaElement {
     }
 
     public static MediaElement of(String source) {
-        return of(source, false);
+        return of(source, true);
     }
 
-
-
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
-    private MediaIdentifierInfo downloadMedia(String source) {
+    private MediaIdentifierInfo downloadMedia(String source, boolean saveToCache) {
         try {
             URL url = new URI(source).toURL();
 
@@ -110,7 +116,7 @@ public class MediaElement {
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 List<BufferedImage> frames = downloadedMedia.getDownloadedMedia();
                 if (!frames.isEmpty() && frames.getFirst().getWidth() > 0 && frames.getFirst().getHeight() > 0) {
-                    if (CONFIG.cacheMedia()) {
+                    if (CONFIG.cacheMedia() && saveToCache) {
                         switch (downloadedMedia) {
                             case DownloadedGif g:
                                 CacheManager.saveGifToCache(g.getOriginalGif(), source);
@@ -134,27 +140,27 @@ public class MediaElement {
 
                     return new MediaIdentifierInfo(identifiers, delays, frames.getFirst().getWidth(), frames.getFirst().getHeight());
                 } else {
-                    return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
+                    return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
                 }
             } else if (downloadedMedia != null) {
                 _errorMessage = downloadedMedia.getErrorMessage();
                 switch (downloadedMedia.getDownloadError()) {
                     case FORMAT -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 64, 64);
+                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512);
                     }
                     case SIZE -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 64, 64); // todo add error image
+                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512); // todo add error image
                     }
                     case WHITELIST -> {
-                        return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 64, 64);
+                        return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512);
                     }
                     default -> {
-                        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
+                        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
                     }
                 }
             } else {
                 _errorMessage = I18n.translate("text.mediachat.media.tooltip.genericError");
-                return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 64, 64);
+                return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
             }
 
         } catch (IOException e) {
@@ -241,6 +247,10 @@ public class MediaElement {
             _hoveredMediaElement = null;
         }
         return _hoveredMediaElement;
+    }
+
+    public boolean isLoading() {
+        return this.currentFrame().equals(MEDIA_LOADING);
     }
 
     private void setIdentifier(Identifier id, int width, int height) {

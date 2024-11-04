@@ -1,12 +1,15 @@
 package com.zappic3.mediachat;
 
+import com.zappic3.mediachat.ui.GifBrowserUI;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.container.Containers;
 import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.layers.Layers;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -30,6 +33,7 @@ public class MediaChatClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			registerConfigObserver();
 			registerCachedTextures();
+			addGifUIToChatScreen();
 
 			MouseClickCallback.EVENT.register((window, button, action, mods) -> {
 				MediaElement.reactToMouseClick(button, action);
@@ -38,6 +42,12 @@ public class MediaChatClient implements ClientModInitializer {
 
 		});
 
+		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+
+	}
+
+	private void onClientTick(MinecraftClient client) {
+		GifBrowserUI.update();
 	}
 
 	public static Path getModDataFolderPath() {
