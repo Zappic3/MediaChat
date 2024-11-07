@@ -10,6 +10,9 @@ import java.util.List;
 @Config(name = "mediachat", wrapperName = "MediaChatConfig")
 public class ConfigModel {
     @SectionHeader("generalOptions")
+    @RangeConstraint(min = 200, max = 50000)
+    public int maxRamUsage = 1000;
+
     @RangeConstraint(min = 3, max = 15)
     public int mediaChatHeight = 5;
     @RangeConstraint(min = 0.1F, max = 1.0F)
@@ -18,7 +21,7 @@ public class ConfigModel {
     @PredicateConstraint("maxMediaSizePredicate")
     public int maxMediaSize = 30;
 
-    public Boolean cacheMedia = false;
+    public Boolean cacheMedia = true;
 
     public int maxCacheSize = 200;
 

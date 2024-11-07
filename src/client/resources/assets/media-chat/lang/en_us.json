@@ -1,6 +1,8 @@
 {
   "text.config.mediachat.title" : "MediaChat Options",
   "text.config.mediachat.section.generalOptions" : "General Options",
+  "text.config.mediachat.option.maxRamUsage" : "Max. RAM Usage (mb)",
+  "text.config.mediachat.option.maxRamUsage.tooltip" : "upper limit of RAM used by media elements in mb",
   "text.config.mediachat.option.mediaChatHeight" : "Media Chat Height",
   "text.config.mediachat.option.mediaChatHeight.tooltip" : "Determines how many chat lines an image takes up",
   "text.config.mediachat.option.maxMediaWidth" : "Media Max Width",
@@ -38,5 +40,24 @@
   "text.mediachat.media.tooltip.whitelistError": "source URL not whitelisted",
   "text.mediachat.media.tooltip.formatError": "source URL doesn't point to a file with a supported file format",
   "text.mediachat.media.tooltip.apiError": "an API (%1$s) returned an error code (%2$s)",
-  "text.mediachat.media.tooltip.genericError": "an unknown error occurred"
+  "text.mediachat.media.tooltip.genericError": "an unknown error occurred",
+  "text.mediachat.gifBrowser.searchbarPlaceholder": "Search Tenor",
+  "text.mediachat.gifBrowser.apiKeyError": [
+    "",
+    {
+      "text": "Your Tenor API Key appears to be invalid! For information on how to obtain an API key, type ",
+      "color": "#FF5555"
+    },
+    {
+      "text:": "'/mediachat tenor'",
+      "color": "#FFFF55"
+    }
+  ],
+  "text.mediachat.gifBrowser.connectionError": [
+    "",
+    {
+      "text": "Either you or the Tenor API are offline. Check your internet connection",
+      "color": "#FF5555"
+    }
+  ]
 }

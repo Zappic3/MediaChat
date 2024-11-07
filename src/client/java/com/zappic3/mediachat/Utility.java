@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
+import net.minecraft.client.texture.TextureManager;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -17,7 +18,6 @@ import org.slf4j.Logger;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -188,7 +188,7 @@ public class Utility {
     // Texture Loading
     // #######################
 
-    public static Identifier registerTexture(BufferedImage bufferedImage, String filenName) throws Exception {
+    public static IdentifierAndSize registerTexture(BufferedImage bufferedImage, String fileName) throws Exception {
         // Convert BufferedImage to InputStream for NativeImage
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(bufferedImage, "png", baos); // Write the BufferedImage as a PNG into the ByteArrayOutputStream
@@ -200,13 +200,47 @@ public class Utility {
         // Create a NativeImageBackedTexture from the NativeImage
         NativeImageBackedTexture texture = new NativeImageBackedTexture(nativeImage);
 
-        // Generate a valid Identifier for the texture (this part can be a unique mod-generated name)
-        Identifier textureId = Identifier.of(MOD_ID, "textures/dynamic/" + filenName.toLowerCase().replace(" ", "_"));
+        // Generate a valid Identifier for the texture
+        Identifier textureId = Identifier.of(MOD_ID, "textures/dynamic/" + fileName.toLowerCase().replace(" ", "_"));
 
         // Register the texture in the Minecraft texture manager
         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);
 
-        // Return the Identifier, now registered and usable in-game
-        return textureId;
+        return new IdentifierAndSize(textureId, calculateTextureMemoryUsage(bufferedImage));
+    }
+
+    public record IdentifierAndSize(Identifier identifier, long size) {}
+    public record IdentifiersAndSize(List<Identifier> identifiers, long size) {}
+
+    public static long calculateTextureMemoryUsage(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int bytesPerPixel = 4; // 4 bytes for RGBA (32-bit)
+
+        return (long) width * height * bytesPerPixel;
+    }
+
+    public static String formatBytes(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.2f KB", bytes / 1024.0);
+        } else if (bytes < 1024 * 1024 * 1024) {
+            return String.format("%.2f MB", bytes / (1024.0 * 1024));
+        } else if (bytes < 1024L * 1024 * 1024 * 1024) {
+            return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
+        } else {
+            return String.format("%.2f TB", bytes / (1024.0 * 1024 * 1024 * 1024));
+        }
+    }
+    
+    public static void unregisterTexture(Identifier textureId) {
+        TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
+        var texture = textureManager.getTexture(textureId);
+
+        if (texture instanceof NativeImageBackedTexture nativeTexture) {
+            nativeTexture.close(); // Frees the memory associated with the texture
+        }
+        textureManager.destroyTexture(textureId); //removes texture from the TextureManager so it can be garbage collected
     }
 }

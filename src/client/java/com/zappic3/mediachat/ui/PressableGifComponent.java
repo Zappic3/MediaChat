@@ -24,23 +24,19 @@ public class PressableGifComponent extends ButtonWidget {
 
     protected boolean textShadow = true;
     private boolean autoHeight = true;
-    private MediaElement _gif;
     private final String _sourceURL;
 
     public PressableGifComponent(String sourceURL, Consumer<PressableGifComponent> onPress) {
         super(0, 0, 0, 0, Text.empty(), button -> onPress.accept((PressableGifComponent) button), ButtonWidget.DEFAULT_NARRATION_SUPPLIER);
-        _gif = null;
         _sourceURL = sourceURL;
         this.sizing(Sizing.content());
     }
 
     @Override
     public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (_gif == null) {
-            _gif = MediaElement.of(_sourceURL, false);
-        }
+        MediaElement gif = MediaElement.of(_sourceURL, false, MediaElement.Importance.LOW);
         try {
-            calcAutoHeight(_gif, this.width);
+            calcAutoHeight(gif, this.width);
             int renderV = 0;
             if (!this.active) {
                 renderV += this.height * 2;
@@ -48,7 +44,7 @@ public class PressableGifComponent extends ButtonWidget {
                 renderV += this.height;
             }
             RenderSystem.enableDepthTest();
-            context.drawTexture(_gif.currentFrame(), this.getX(), this.getY(), 0, renderV, this.width, this.height, this.width, this.height);
+            context.drawTexture(gif.currentFrame(), this.getX(), this.getY(), 0, renderV, this.width, this.height, this.width, this.height);
             if (!this.getMessage().equals(Text.empty())) {
                 //context.drawTexture(GIF_CATEGORY_OVERLAY, this.getX(), this.getY(), 0, renderV, this.width, this.height, this.width, this.height);
                 // todo add overlay

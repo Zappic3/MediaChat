@@ -11,6 +11,7 @@ import io.wispforest.owo.ui.layers.Layers;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextHandler;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.resource.language.I18n;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +25,7 @@ import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
-    private static final String searchBarDefaultText = "Search Tenor";
+    private static final Text searchBarDefaultText = Text.translatable("text.mediachat.gifBrowser.searchbarPlaceholder");
     private boolean searchbarIsDefault;
     private static GifBrowserUI _currentInstance;
     private FlowLayout _root;
@@ -84,12 +85,12 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     private FlowLayout buildGifBrowser() {
         FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
-        TextBoxComponent searchbar = Components.textBox(Sizing.fill()).text(searchBarDefaultText);
+        TextBoxComponent searchbar = Components.textBox(Sizing.fill()).text(getSearchBarDefaultString());
         searchbar.id("searchbar");
         searchbar.onChanged().subscribe((newText) -> {
                     if (_searchEnabled) {
                         String cleanedText = TenorService.sanitizeQuery(newText);
-                        if (!cleanedText.equals(searchBarDefaultText) && !cleanedText.isEmpty() && !cleanedText.equals(currentSearchTerm)) {
+                        if (!cleanedText.equals(getSearchBarDefaultString()) && !cleanedText.isEmpty() && !cleanedText.equals(currentSearchTerm)) {
                             if (currentSearchResponse != null && !currentSearchResponse.isDone()) {
                                 currentSearchResponse.cancel(true);
                             }
@@ -297,41 +298,32 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     private void displayError(TenorService.connectionStatus connection) {
         _searchEnabled = false;
-        String rawMsg;
-        List<StringVisitable> formattedMsgList;
-        MutableText formattedMsg;
+        Text rawMsg;
 
-        //todo change this to translatable strings
         if (connection.equals(TenorService.connectionStatus.INVALID_API_KEY)) {
-            rawMsg = "Your Tenor API Key appears to be invalid! For information on how to obtain an API key, type '/mediachat tenor'";
+            rawMsg = Text.translatable("text.mediachat.gifBrowser.apiKeyError");
         } else if (connection.equals(TenorService.connectionStatus.NO_INTERNET)) {
-            rawMsg = "Either you or the Tenor API are offline. Check your internet connection";
+            rawMsg = Text.translatable("text.mediachat.gifBrowser.connectionError");
         } else {
-            rawMsg = "??? - If you're seeing this, you found a new and exiting bug!";
+            rawMsg = Text.of("??? - If you're seeing this, you found a new and exiting bug!");
         }
-        LOGGER.info("Connection: "+connection.name());
 
         FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
         layout.surface(Surface.VANILLA_TRANSLUCENT)
-                .positioning(Positioning.relative(100, 100))
-                .margins(Insets.of(0,0, 0, 0));
-
-        TextHandler textHandler = MinecraftClient.getInstance().textRenderer.getTextHandler();
-        formattedMsgList = textHandler.wrapLines(rawMsg, 50, Style.EMPTY.withBold(true).withColor(TextColor.fromFormatting(Formatting.RED)));
-        formattedMsg = Text.empty();
-        for (StringVisitable visitable : formattedMsgList) {
-            formattedMsg.append(Text.literal(visitable.getString()));
-        }
-
-        LabelComponent label = Components.label(formattedMsg)
-                .horizontalTextAlignment(HorizontalAlignment.CENTER)
-                .verticalTextAlignment(VerticalAlignment.CENTER);
-        label.positioning(Positioning.relative(0, 0));
-        label.sizing(Sizing.expand(), Sizing.fill());
-        layout.child(label);
+                .positioning(Positioning.relative(100, 100));
 
         _root.clearChildren();
         _root.child(layout);
+
+
+        LabelComponent label = Components.label(rawMsg);
+                //.horizontalTextAlignment(HorizontalAlignment.CENTER)
+                //.verticalTextAlignment(VerticalAlignment.CENTER);
+        //label.positioning(Positioning.relative(0, 0));
+        //label.sizing(Sizing.expand(), Sizing.fill());
+        LOGGER.info("layout width: " + layout.width() + ", label width: " + label.width());
+        layout.child(label);
+
         _gifBrowserOpen = false; // todo this is a quick-fix, because when the warning is closed, but the chat screen not exited, the gif category screen wont refresh for some reason
 
     }
@@ -381,16 +373,20 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         return component;
     }
 
-    private void updateSearchbar() {
+    private static String getSearchBarDefaultString() {
+        return I18n.translate(searchBarDefaultText.getString());
+    }
+
+        private void updateSearchbar() {
         TextBoxComponent searchbar = _root.childById(TextBoxComponent.class, "searchbar");
         if (searchbar != null) {
-            if (searchbar.isFocused() && searchbarIsDefault && searchbar.getText().equals(searchBarDefaultText)) {
+            if (searchbar.isFocused() && searchbarIsDefault && searchbar.getText().equals(getSearchBarDefaultString())) {
                 searchbarIsDefault = false;
                 searchbar.text("");
             } else if (!searchbar.isFocused() && !searchbarIsDefault && searchbar.getText().isEmpty()) {
                 searchbarIsDefault = true;
-                searchbar.text(searchBarDefaultText);
-            } else if (!searchbar.isFocused() && searchbarIsDefault && !searchbar.getText().equals(searchBarDefaultText)) {
+                searchbar.text(getSearchBarDefaultString());
+            } else if (!searchbar.isFocused() && searchbarIsDefault && !searchbar.getText().equals(getSearchBarDefaultString())) {
                 searchbarIsDefault = false;
             }
         }

@@ -9,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.texture.TextureManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -16,16 +17,22 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.net.URI;
+import java.time.Duration;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import com.sksamuel.scrimage.ImmutableImage;
 
+import static com.zappic3.mediachat.CacheManager.isFileInCache;
+import static com.zappic3.mediachat.CacheManager.loadFileFromCache;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.MOD_ID;
-import static com.zappic3.mediachat.Utility.registerTexture;
+import static com.zappic3.mediachat.Utility.*;
 
 public class MediaElement {
     private static final Identifier MEDIA_LOADING =  Identifier.of(MOD_ID, "textures/media_loading.png");
@@ -44,36 +51,62 @@ public class MediaElement {
     private final UUID _elementId;
     private String _errorMessage;
 
+    // this is used to determine which textures to unload to free up ram
+    private long _lastTimeUsed;
+    private final Importance _importance;
+    private long _sizeInBit; // important: a value of -1 means that this MediaElement uses an internal texture that should not be unloaded
+    public enum Importance {
+        HIGH(Duration.ofMinutes(30)),
+        NORMAL(Duration.ofMinutes(10)),
+        LOW(Duration.ofSeconds(30)),;
+
+        public final Duration duration;
+        private Importance(Duration duration) {
+            this.duration = duration;
+        }
+    }
+
     // animated element support
     private int _currentFrame = 0;
     private volatile List<Long> _frameDelays = new ArrayList<>();
     private boolean isAnimPlaying = false;
     private long animPlayingStartTime = -1;
 
-    private MediaElement(String source, Identifier id) {
-        this(source, new ArrayList<>(List.of(id)), true);
+    private MediaElement(String source, Identifier id, long sizeInBits) {
+        this(source, new ArrayList<>(List.of(id)), true, Importance.NORMAL, sizeInBits);
     }
 
-    private MediaElement(String source, Identifier id, boolean saveToCache) {
-        this(source, new ArrayList<>(List.of(id)), saveToCache);
+    private MediaElement(String source, Identifier id, boolean saveToCache, long sizeInBits) {
+        this(source, new ArrayList<>(List.of(id)), saveToCache, Importance.NORMAL, sizeInBits);
     }
 
-    private MediaElement(String source, List<Identifier> ids) {
-        this(source, ids, true);
+    private MediaElement(String source, Identifier id, Importance importance, long sizeInBits) {
+        this(source, new ArrayList<>(List.of(id)), true, importance, sizeInBits);
     }
 
-    private MediaElement(String source, List<Identifier> ids, boolean saveToCache) {
+    private MediaElement(String source, Identifier id, boolean saveToCache, Importance importance, long sizeInBits) {
+        this(source, new ArrayList<>(List.of(id)), saveToCache, importance, sizeInBits);
+    }
+
+    private MediaElement(String source, List<Identifier> ids, long sizeInBits) {
+        this(source, ids, true, Importance.NORMAL, sizeInBits);
+    }
+
+    private MediaElement(String source, List<Identifier> ids, boolean saveToCache, Importance importance, long sizeInBit) {
         this._source = source;
         this._identifier = ids;
         this._elementId = UUID.randomUUID();
         this._errorMessage = null;
+        this._lastTimeUsed = System.currentTimeMillis();
+        this._importance = importance;
+        this._sizeInBit = sizeInBit;
 
         if (source != null) {
-            this.setIdentifier(MEDIA_LOADING, 64, 64);
+            this.setIdentifier(MEDIA_LOADING, 64, 64, -1);
             this.loadFuture = CompletableFuture.runAsync(() -> {
                 try {
                     MediaIdentifierInfo mii = downloadMedia(source, saveToCache);
-                    this.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height());
+                    this.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height(), mii.sizeInBit());
                     if (mii.delays != null) {
                         this.isAnimPlaying = true;
                     }
@@ -87,31 +120,64 @@ public class MediaElement {
         }
     }
 
-    public record MediaIdentifierInfo(List<Identifier> id, List<Long> delays, int width, int height) {
-        public MediaIdentifierInfo(Identifier id, int width, int height) {
-            this(List.of(id), null, width, height);
+    public record MediaIdentifierInfo(List<Identifier> id, List<Long> delays, int width, int height, long sizeInBit) {
+        public MediaIdentifierInfo(Identifier id, int width, int height, long sizeInBit) {
+            this(List.of(id), null, width, height, sizeInBit);
         }
     }
 
-    public static MediaElement of(String source, boolean saveToCache) {
-        MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING, saveToCache));
+    public static MediaElement of(String source, boolean saveToCache, Importance importance) {
+        MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING, saveToCache, importance, -1));
         if (element._source == null) { // this is useful to add a source to images loaded from local cache
             element._source = source;
         }
+        element._lastTimeUsed = System.currentTimeMillis();
         return element;
     }
 
+    public static MediaElement of(String source, boolean saveToCache) {
+        return of(source, saveToCache, Importance.NORMAL);
+    }
+
     public static MediaElement of(String source) {
-        return of(source, true);
+        return of(source, true, Importance.NORMAL);
     }
 
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private MediaIdentifierInfo downloadMedia(String source, boolean saveToCache) {
-        try {
-            URL url = new URI(source).toURL();
+        DownloadedMedia downloadedMedia;
 
+        try {
+            if (isFileInCache(source.hashCode())) {
+                OneOfTwo<BufferedImage, AnimatedGif> result =  loadFileFromCache(source.hashCode());
+                if (result != null) {
+                    if (result.getFirst() != null) {
+                        Utility.IdentifierAndSize ias = registerTexture(result.getFirst(), source.hashCode()+"_"+0);
+                        return new MediaIdentifierInfo(ias.identifier(), result.getFirst().getWidth(), result.getFirst().getHeight(), calculateTextureMemoryUsage(result.getFirst()));
+
+                    } else if (result.getSecond() != null) {
+                        AnimatedGif gif = result.getSecond();
+                        List<Long> delays = new ArrayList<>();
+                        List<Identifier> identifiers = new ArrayList<>();
+                        long totalSize = 0;
+                        Utility.IdentifierAndSize ias;
+                        for (int i = 0; i < gif.getFrameCount(); i++) {
+                            ImmutableImage currentFrame = gif.getFrame(i);
+                            BufferedImage image = currentFrame.toNewBufferedImage(currentFrame.getType());
+                            ias = registerTexture(image, source.hashCode()+"_"+i);
+                            identifiers.add(ias.identifier());
+                            totalSize += ias.size();
+                            delays.add(gif.getDelay(i).toMillis());
+                        }
+                        return new MediaIdentifierInfo(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height, totalSize);
+                    }
+                }
+            }
+
+
+            URL url = new URI(source).toURL();
             FileSharingService service = FileSharingService.getDownloadServiceFor(url);
-            DownloadedMedia downloadedMedia = service.downloadWithChecks(url);
+            downloadedMedia = service.downloadWithChecks(url);
 
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 List<BufferedImage> frames = downloadedMedia.getDownloadedMedia();
@@ -129,38 +195,40 @@ public class MediaElement {
 
                     //################################################
                     List<Identifier> identifiers = new ArrayList<>();
+                    int totalSize = 0;
                     for (int i = 0; i < frames.size(); i++) {
                         BufferedImage image = frames.get(i);
-                        Identifier id = registerTexture(image, source.hashCode()+"_"+i);
-                        identifiers.add(id);
+                        Utility.IdentifierAndSize ias = registerTexture(image, source.hashCode()+"_"+i);
+                        totalSize += ias.size();
+                        identifiers.add(ias.identifier());
                     }
 
                     List<Long> delays = null;
                     if (downloadedMedia instanceof DownloadedGif) { delays = ((DownloadedGif) downloadedMedia).getDelays(); }
 
-                    return new MediaIdentifierInfo(identifiers, delays, frames.getFirst().getWidth(), frames.getFirst().getHeight());
+                    return new MediaIdentifierInfo(identifiers, delays, frames.getFirst().getWidth(), frames.getFirst().getHeight(), totalSize);
                 } else {
-                    return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
+                    return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
                 }
             } else if (downloadedMedia != null) {
                 _errorMessage = downloadedMedia.getErrorMessage();
                 switch (downloadedMedia.getDownloadError()) {
                     case FORMAT -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512);
+                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1);
                     }
                     case SIZE -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512); // todo add error image
+                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1); // todo add error image
                     }
                     case WHITELIST -> {
-                        return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512);
+                        return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512, -1);
                     }
                     default -> {
-                        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
+                        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
                     }
                 }
             } else {
                 _errorMessage = I18n.translate("text.mediachat.media.tooltip.genericError");
-                return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512);
+                return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
             }
 
         } catch (IOException e) {
@@ -171,32 +239,82 @@ public class MediaElement {
             LOGGER.error("Error while registering image: \n" + e.getMessage());
             setErrorMessage("Error while registering image: \n"+e.getMessage());
         }
-        return new MediaIdentifierInfo(Identifier.of(MOD_ID, "textures/image.png"), 64, 64);
+        return new MediaIdentifierInfo(Identifier.of(MOD_ID, "textures/image.png"), 64, 64, -1);
     }
-
-
 
     // this is intended for loading media that was saved to disk on startup. //todo check if the url may be needed (e. g. whitelist checking)
-    public static void add(Identifier id, int hashCode, int width, int height) {
-        MediaElement e = new MediaElement(null, id);
-        e.setIdentifier(id, width, height);
+    public static void add(Identifier id, int hashCode, int width, int height, long sizeInBit) {
+        MediaElement e = new MediaElement(null, id, sizeInBit);
+        e.setIdentifier(id, width, height, sizeInBit);
         _mediaPool.put(hashCode, e);
     }
 
-    public static void add(AnimatedGif gif, int hashCode) throws Exception {
-        List<Long> delays = new ArrayList<>();
-        List<Identifier> identifiers = new ArrayList<>();
-        for (int i = 0; i < gif.getFrameCount(); i++) {
-            ImmutableImage currentFrame = gif.getFrame(i);
-            BufferedImage image = currentFrame.toNewBufferedImage(currentFrame.getType());
-            Identifier id = registerTexture(image, hashCode+"_"+i);
-            identifiers.add(id);
-            delays.add(gif.getDelay(i).toMillis());
+    /**
+     * Removes the texture(s) associated with the {@link MediaElement} from the {@link TextureManager}
+     * and then removes all internal references to the {@link MediaElement}, so everything can be garbage collected.
+     */
+    public void remove() {
+        for (Identifier id : _identifier) {
+            unregisterTexture(id);
+        }
+        if (this.source() != null) {
+            _mediaPool.remove(this.source().hashCode());
+        }
+    }
+
+    /**
+     * Iterates over all currently existing  {@link MediaElement} Objects
+     * and determines if they should be unloaded, based on the last time they were referenced and
+     * their {@link Importance}.
+     */
+    public static void removeUnusedElements() {
+        long currentTime = System.currentTimeMillis();
+        Duration minNotUsed = Duration.ofSeconds(5);
+
+        List<MediaElement> elementsToRemove = new ArrayList<>(_mediaPool.values().stream()
+                .filter(media -> media.timeUntilRemoval(currentTime) <= 0 && media._sizeInBit != -1)
+                .toList());
+        int removedElementsCount = elementsToRemove.size();
+        for (MediaElement media : elementsToRemove) {
+            media.remove();
         }
 
-        MediaElement e = new MediaElement(null, identifiers);
-        e.setIdentifier(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height);
-        _mediaPool.put(hashCode, e);
+        long totalSize = _mediaPool.values().stream()
+                .mapToLong(MediaElement::sizeInBit)
+                .sum();
+
+        // if we are above the ram limit, remove more elements until we aren't
+        long ramLimit = (long) CONFIG.maxRamUsage() * 1_048_576 * 8; // convert mb to bit
+        if (totalSize > ramLimit) {
+            elementsToRemove.clear();
+
+            List<MediaElement> sortedByRemovalTime = _mediaPool.values().stream()
+                    .sorted(Comparator.comparingLong(media -> media.timeUntilRemoval(currentTime)))
+                    .toList();
+
+            Iterator<MediaElement> iterator = sortedByRemovalTime.iterator();
+            while (totalSize > ramLimit && iterator.hasNext()) {
+                MediaElement media = iterator.next();
+                if (media._lastTimeUsed + minNotUsed.toMillis() < currentTime) {
+                    elementsToRemove.add(media);
+                    totalSize -= media.sizeInBit();
+                }
+            }
+            removedElementsCount += elementsToRemove.size();
+            for (MediaElement media : elementsToRemove) {
+                media.remove();
+            }
+
+            LOGGER.info("Removed {} unused media element(s) from memory (RAM limit reached)", removedElementsCount);
+        } else {
+            if (removedElementsCount > 0) {
+                LOGGER.info("Removed {} unused media element(s) from memory", removedElementsCount);
+            }
+        }
+    }
+
+    private long timeUntilRemoval(long currentTime) {
+        return (_lastTimeUsed + _importance.duration.toMillis()) - currentTime;
     }
 
     public void setErrorMessage(String errorMessage) {
@@ -220,6 +338,10 @@ public class MediaElement {
         }
         animPlayingStartTime = currentTime;
         _currentFrame = 0;
+    }
+
+    public long sizeInBit() {
+        return _sizeInBit;
     }
 
     public int width() {
@@ -253,19 +375,20 @@ public class MediaElement {
         return this.currentFrame().equals(MEDIA_LOADING);
     }
 
-    private void setIdentifier(Identifier id, int width, int height) {
+    private void setIdentifier(Identifier id, int width, int height, long sizeInBit) {
         List<Identifier> ids = new ArrayList<>();
         ids.add(id);
-        this.setIdentifier(new ArrayList<>(List.of(id)), null, width, height);
+        this.setIdentifier(new ArrayList<>(List.of(id)), null, width, height, sizeInBit);
         this.isAnimPlaying = false;
     }
 
-    private void setIdentifier(List<Identifier> ids, List<Long> delays, int width, int height) {
+    private void setIdentifier(List<Identifier> ids, List<Long> delays, int width, int height, long sizeInBit) {
         if (delays != null && ids.size() != delays.size()) {throw new IllegalArgumentException("Error setting MediaElement Identifier:\nThe 'ids' and 'delays' list must have the same size (or null)");}
         this._identifier = ids;
         this._width = width;
         this._height = height;
         this._frameDelays = delays;
+        this._sizeInBit = sizeInBit;
         this.isAnimPlaying = true;
     }
 
@@ -292,6 +415,10 @@ public class MediaElement {
         }
         tooltip.append("§eSource:§b ").append((_source!=null ? _source : "Local Cache")).append("\n");
 
+        if (_sizeInBit != -1) {
+            tooltip.append("§eSize:§b ").append(formatBytes(this.sizeInBit())).append("\n");
+        }
+
         // todo actually implement these keybinds
         String keybinds = "§7<Leftclick>§8 open image\n" +
                 "§7<Rightclick>§8 copy URL\n" +
@@ -300,7 +427,6 @@ public class MediaElement {
         tooltip.append(keybinds);
         return Text.of(tooltip.toString());
     }
-
 
     public static void renderTooltip() {
         if (hovered() != null) {
