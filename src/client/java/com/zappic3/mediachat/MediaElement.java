@@ -39,6 +39,7 @@ public class MediaElement {
     private static final Identifier MEDIA_UNSUPPORTED =  Identifier.of(MOD_ID, "textures/media_unsupported.png");
     private static final Identifier MEDIA_DOWNLOAD_FAILED =  Identifier.of(MOD_ID, "textures/media_download_failed.png");
     private static final Identifier MEDIA_NOT_WHITELISTED =  Identifier.of(MOD_ID, "textures/media_not_whitelisted.png");
+    private static final Identifier MEDIA_TOO_BIG =  Identifier.of(MOD_ID, "textures/media_too_big.png");
 
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
     private static MediaElement _hoveredMediaElement = null;
@@ -217,7 +218,7 @@ public class MediaElement {
                         return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1);
                     }
                     case SIZE -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1); // todo add error image
+                        return new MediaIdentifierInfo(MEDIA_TOO_BIG, 512, 512, -1);
                     }
                     case WHITELIST -> {
                         return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512, -1);
