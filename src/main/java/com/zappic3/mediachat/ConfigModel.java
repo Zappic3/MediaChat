@@ -25,6 +25,7 @@ public class ConfigModel {
 
     public int maxCacheSize = 200;
 
+    public boolean displayDebugScreenInfos = true;
 
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")

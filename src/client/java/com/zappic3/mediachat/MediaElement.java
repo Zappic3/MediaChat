@@ -44,6 +44,7 @@ public class MediaElement {
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
     private static MediaElement _hoveredMediaElement = null;
 
+
     private  CompletableFuture<Void> loadFuture ;
     private String _source;
     private volatile List<Identifier> _identifier = new ArrayList<>();
@@ -59,7 +60,7 @@ public class MediaElement {
     public enum Importance {
         HIGH(Duration.ofMinutes(30)),
         NORMAL(Duration.ofMinutes(10)),
-        LOW(Duration.ofSeconds(30)),;
+        LOW(Duration.ofSeconds(30));
 
         public final Duration duration;
         private Importance(Duration duration) {
@@ -280,9 +281,7 @@ public class MediaElement {
             media.remove();
         }
 
-        long totalSize = _mediaPool.values().stream()
-                .mapToLong(MediaElement::sizeInBit)
-                .sum();
+        long totalSize = totalMediaElementSize();
 
         // if we are above the ram limit, remove more elements until we aren't
         long ramLimit = (long) CONFIG.maxRamUsage() * 1_048_576 * 8; // convert mb to bit
@@ -312,6 +311,17 @@ public class MediaElement {
                 LOGGER.info("Removed {} unused media element(s) from memory", removedElementsCount);
             }
         }
+    }
+
+    public static long totalMediaElementSize() {
+        return _mediaPool.values().stream()
+                .filter(element -> element.sizeInBit() != -1)
+                .mapToLong(MediaElement::sizeInBit)
+                .sum();
+    }
+
+    public static int loadedMediaElementCount() {
+        return _mediaPool.size();
     }
 
     private long timeUntilRemoval(long currentTime) {
@@ -417,7 +427,7 @@ public class MediaElement {
         tooltip.append("§eSource:§b ").append((_source!=null ? _source : "Local Cache")).append("\n");
 
         if (_sizeInBit != -1) {
-            tooltip.append("§eSize:§b ").append(formatBytes(this.sizeInBit())).append("\n");
+            tooltip.append("§eSize:§b ").append(formatBits(this.sizeInBit())).append("\n");
         }
 
         // todo actually implement these keybinds

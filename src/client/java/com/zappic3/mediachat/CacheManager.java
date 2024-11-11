@@ -115,5 +115,12 @@ public class CacheManager {
         };
     }
 
+    public static int getCachedElementCount() {
+        return _orderedListOfFiles.size();
+    }
+
+    public static long getCurrentCacheSize() {
+        return _currentCacheSize;
+    }
 
 }

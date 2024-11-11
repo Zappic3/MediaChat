@@ -11,6 +11,8 @@
   "text.config.mediachat.option.cacheMedia.tooltip" : "Should media elements be saved to disk.\nUseful if you use mods that restore Chat history.",
   "text.config.mediachat.option.maxCacheSize" : "Max Cache Size (mB)",
   "text.config.mediachat.option.maxCacheSize.tooltip" : "If the max cache size is exceeded,\nthe oldest saved media element is deleted",
+  "text.config.mediachat.option.displayDebugScreenInfos" : "Display Debug Infos",
+  "text.config.mediachat.option.displayDebugScreenInfos.tooltip" : "If Infos about the mod should be\ndisplayed in the F3 debug screen",
   "text.config.mediachat.option.maxMediaWidth.tooltip" : "Determines the max. media width,\nrelative to your chat width",
   "text.config.mediachat.option.startMediaUrl" : "Media Start Marker",
   "text.config.mediachat.option.startMediaUrl.tooltip" : "Must be entered in the Chat to mark the\nbeginning of a media element",

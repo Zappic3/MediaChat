@@ -220,9 +220,12 @@ public class Utility {
         return (long) width * height * bytesPerPixel;
     }
 
-    public static String formatBytes(long bytes) {
+    public static String formatBits(long bits) {
+        // Convert bits to bytes
+        double bytes = bits / 8.0;
+
         if (bytes < 1024) {
-            return bytes + " B";
+            return String.format("%.2f B", bytes);
         } else if (bytes < 1024 * 1024) {
             return String.format("%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
@@ -233,7 +236,12 @@ public class Utility {
             return String.format("%.2f TB", bytes / (1024.0 * 1024 * 1024 * 1024));
         }
     }
-    
+
+
+    public static long megabytesToBits(double megabytes) {
+        return (long)(megabytes * 1024 * 1024 * 8);
+    }
+
     public static void unregisterTexture(Identifier textureId) {
         TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
         var texture = textureManager.getTexture(textureId);
