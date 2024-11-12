@@ -151,6 +151,10 @@ public class Utility {
         return OrderedText.concat(styledTexts);
     }
 
+    public static String getURLDetectionRegex() {
+        return DETECT_MEDIA_MESSAGE_REGEX;
+    }
+
     public static String getUrlFromModMessage(String message) {
         Pattern regex = Pattern.compile(DETECT_MEDIA_MESSAGE_REGEX);
         Matcher matcher = regex.matcher(message);

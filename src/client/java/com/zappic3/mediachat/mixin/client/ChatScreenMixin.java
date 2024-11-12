@@ -1,5 +1,6 @@
 package com.zappic3.mediachat.mixin.client;
 
+import com.zappic3.mediachat.IMediaChatPaste;
 import com.zappic3.mediachat.filesharing.FileSharingService;
 import com.zappic3.mediachat.ui.ConfirmUploadScreen;
 import com.zappic3.mediachat.ui.GifBrowserUI;
@@ -12,6 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.net.URL;
@@ -83,6 +85,7 @@ public class ChatScreenMixin extends Screen {
         }
     }
 
+    // only close the GIF browser on esc, instead of the entire screen
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     public void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         if (keyCode == GLFW_KEY_ESCAPE) {
@@ -91,6 +94,13 @@ public class ChatScreenMixin extends Screen {
                 gif.closeGifBrowser();
                 cir.setReturnValue(false);
             }
+        }
+    }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    public void onInit(CallbackInfo ci) {
+        if (chatField instanceof IMediaChatPaste) {
+            ((IMediaChatPaste) chatField).mediaChat$enableMediaChatPaste(true);
         }
     }
 

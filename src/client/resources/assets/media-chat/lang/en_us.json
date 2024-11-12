@@ -13,6 +13,8 @@
   "text.config.mediachat.option.maxCacheSize.tooltip" : "If the max cache size is exceeded,\nthe oldest saved media element is deleted",
   "text.config.mediachat.option.displayDebugScreenInfos" : "Display Debug Infos",
   "text.config.mediachat.option.displayDebugScreenInfos.tooltip" : "If Infos about the mod should be\ndisplayed in the F3 debug screen",
+  "text.config.mediachat.option.autoWrapUrlsOnPasteShortcut" : "AutoWrap URLs Paste Shortcut",
+  "text.config.mediachat.option.autoWrapUrlsOnPasteShortcut.tooltip" : "Press <CMD + SHIFT + V> to automatically add\nstart and end markers to valid URLs",
   "text.config.mediachat.option.maxMediaWidth.tooltip" : "Determines the max. media width,\nrelative to your chat width",
   "text.config.mediachat.option.startMediaUrl" : "Media Start Marker",
   "text.config.mediachat.option.startMediaUrl.tooltip" : "Must be entered in the Chat to mark the\nbeginning of a media element",
@@ -30,6 +32,8 @@
   "text.config.mediachat.option.useWhitelist" : "Use Whitelist",
   "text.config.mediachat.option.useWhitelist.tooltip" : "if enabled, only downloads media from whitelisted websites",
   "text.config.mediachat.option.whitelistedWebsites" : "Whitelisted Websites",
+  "text.config.mediachat.option.tenorApiKey" : "Tenor API Key",
+  "text.config.mediachat.option.tenorApiKey.tooltip": "Input your Tenor API key to use the GIF browser.\nFor information on how to obtain an API key, type §e/mediachat tenor",
   "text.config.mediachat.section.debugOptions" : "Debug Options",
   "text.config.mediachat.category.debugOptions" : "Advanced / Debug Options",
   "text.config.mediachat.category.debugOptions.tooltip" : "These options are mostly for debugging.\nIf you dont know what you are doing, dont alter them",
@@ -44,22 +48,61 @@
   "text.mediachat.media.tooltip.apiError": "an API (%1$s) returned an error code (%2$s)",
   "text.mediachat.media.tooltip.genericError": "an unknown error occurred",
   "text.mediachat.gifBrowser.searchbarPlaceholder": "Search Tenor",
+  "text.mediachat.tenorApiKeyTutorial.beginning" : "To obtain a Tenor API key follow these steps:",
+  "text.mediachat.tenorApiKeyTutorial.1" : [
+    {
+      "text": "1. Visit "
+    },
+    {
+      "text": "https://developers.google.com/tenor/guides/quickstart#setup",
+      "color": "blue",
+      "underlined": true,
+      "clickEvent": {
+        "action": "open_url",
+        "value": "https://developers.google.com/tenor/guides/quickstart#setup"
+      },
+      "hoverEvent": {
+        "action": "show_text",
+        "contents": [
+          {
+            "text": "Click to open the Tenor API quickstart guide.",
+            "color": "yellow"
+          }
+        ]
+      }
+    }
+  ],
+  "text.mediachat.tenorApiKeyTutorial.2" : "2. Click on §e\"Get a Tenor API Key\"§r. (If you cant find this link, it should be almost directly below the §e\"Setup\"§r title near the top of the page)",
+  "text.mediachat.tenorApiKeyTutorial.3" : "3. If you arent already logged in, log in with your google account.",
+  "text.mediachat.tenorApiKeyTutorial.4" : "4. Now a popup with the title §e\"Enable Tenor API\"§r should be open. Select §e\"+ Create a new project\"§r from the dropdown menu.",
+  "text.mediachat.tenorApiKeyTutorial.5" : "5. Enter a descriptive project name, for example §e\"MediaChat Tenor API Access\"§r and click §e\"Next\"§r.",
+  "text.mediachat.tenorApiKeyTutorial.6" : "6. Now click §e\"SHOW KEY\"§r and copy the key to your clipboard.",
+  "text.mediachat.tenorApiKeyTutorial.7.1" : "7.1. In Minecraft, if you have the §e\"Mod Menu\"§r mod installed, open the settings for the §e\"MediaChat\"§r mod. Paste your API key into the §e\"Tenor API Key\"§r field and click §e\"Done\"§r to apply the change.",
+  "text.mediachat.tenorApiKeyTutorial.7.2.1" : "7.2. If you dont have the §e\"Mod Menu\"§r mod installed, Open the §e\"mediachat.json5\"§r file, located at  ",
+  "text.mediachat.tenorApiKeyTutorial.7.2.2" :" with a text editor and paste your API key in between the two empty quotation marks right of §e\"tenorApiKey\"§r.",
+
+  "text.mediachat.tenorApiKeyTutorial.disclaimer" : [
+    {
+      "text": "DO NOT SHARE YOUR API KEY WITH ANYONE. ALSO DO NOT SHARE YOUR MEDIACHAT.JSON SAVE FILE, AS IT CONTAINS YOUR API KEY!",
+      "color": "red",
+      "bold": true
+    }
+  ],
   "text.mediachat.gifBrowser.apiKeyError": [
-    "",
     {
       "text": "Your Tenor API Key appears to be invalid! For information on how to obtain an API key, type ",
       "color": "#FF5555"
     },
     {
-      "text:": "'/mediachat tenor'",
+      "text": "'/mediachat tenor'",
       "color": "#FFFF55"
     }
   ],
   "text.mediachat.gifBrowser.connectionError": [
-    "",
     {
       "text": "Either you or the Tenor API are offline. Check your internet connection",
       "color": "#FF5555"
     }
   ]
+
 }

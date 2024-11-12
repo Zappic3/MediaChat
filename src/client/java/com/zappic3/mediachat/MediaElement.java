@@ -213,7 +213,7 @@ public class MediaElement {
                     return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
                 }
             } else if (downloadedMedia != null) {
-                _errorMessage = downloadedMedia.getErrorMessage();
+                this.setErrorMessage(downloadedMedia.getErrorMessage());
                 switch (downloadedMedia.getDownloadError()) {
                     case FORMAT -> {
                         return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1);
@@ -229,7 +229,7 @@ public class MediaElement {
                     }
                 }
             } else {
-                _errorMessage = I18n.translate("text.mediachat.media.tooltip.genericError");
+                this.setErrorMessage(I18n.translate("text.mediachat.media.tooltip.genericError"));
                 return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
             }
 

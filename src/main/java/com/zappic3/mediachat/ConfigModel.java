@@ -27,6 +27,8 @@ public class ConfigModel {
 
     public boolean displayDebugScreenInfos = true;
 
+    public boolean autoWrapUrlsOnPasteShortcut = true;
+
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String startMediaUrl = "[";
@@ -46,7 +48,7 @@ public class ConfigModel {
     public boolean useWhitelist = false;
     //@RegexConstraint("^(?!.*\\.\\.)(?!.*(^\\.|\\.$)).+?\\..+$")
     @Hook
-    public List<String> whitelistedWebsites = new ArrayList<>(List.of("imgur.com", "i.redd.it")); // todo add constraints
+    public List<String> whitelistedWebsites = new ArrayList<>(List.of("tenor.com")); // todo add constraints
 
     public String tenorApiKey = "";
 

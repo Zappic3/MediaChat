@@ -4,10 +4,10 @@
         <flow-layout direction="vertical">
             <children>
                 <label>
-                    <text>This Server doesnt allow file uploading.</text>
+                    <text>This Server doesn't allow file uploading.</text>
                 </label>
                 <label>
-                    <text>Upload the files to Imgur to share them instead?</text>
+                    <text>Upload the files to filebin.net to share them instead?</text>
                 </label>
                 <flow-layout direction="horizontal">
                     <children>
