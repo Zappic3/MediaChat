@@ -12,7 +12,9 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,13 +33,17 @@ public class DefaultWebDownload extends FileSharingService{
     }
 
     public DownloadedMedia download(URL url) {
+        HttpURLConnection connection = null;
         try {
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
             connection.setRequestMethod("HEAD");
             connection.connect();
 
             String contentType = connection.getContentType();
             int contentLength = connection.getContentLength();
+
             if (contentType.startsWith("image") && contentLength > 0 && contentLength <= CONFIG.maxMediaSize() * 1024 * 1024) {  // convert mb to byte
                 ImageInputStream imageStream = ImageIO.createImageInputStream(url.openStream());
 
@@ -90,11 +96,23 @@ public class DefaultWebDownload extends FileSharingService{
                 if (!contentType.startsWith("image")) {
                     return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError"));
                 }
-                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, I18n.translate("text.media.tooltip.sizeError", CONFIG.maxMediaSize()+"mb", ((contentLength/1024)/1024)+"mb"));
+                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, I18n.translate("text.media.tooltip.sizeError", CONFIG.maxMediaSize() + "mb", ((contentLength / 1024) / 1024) + "mb"));
             }
-        } catch (Exception e) {
+        } catch (SocketTimeoutException e) {
+            LOGGER.error("Error while downloading media element.\n" +
+                    "Make sure you are connected to the internet");
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.internetError"));
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unknown host exception for {}", e.getMessage());
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.unknownHostError", e.getMessage()));
+        }
+        catch (Exception e) {
             LOGGER.error(e.getMessage());
             return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, e.getMessage());
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
         return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, I18n.translate("text.mediachat.media.tooltip.genericError"));
     }

@@ -75,24 +75,12 @@ public class PressableGifComponent extends ButtonWidget {
         }
     }
 
-
-    public PressableGifComponent onPress(Consumer<ButtonComponent> onPress) {
-        ((ButtonWidgetAccessor) this).owo$setOnPress(button -> onPress.accept((ButtonComponent) button));
-        return this;
+    @SuppressWarnings("RedundantMethodOverride")
+    @Override
+    public boolean canFocus(FocusSource source) {
+        return false;
     }
 
-    public PressableGifComponent active(boolean active) {
-        this.active = active;
-        return this;
-    }
-
-    public boolean active() {
-        return this.active;
-    }
-
-    public boolean autoHeight() {
-        return this.autoHeight;
-    }
 
     public PressableGifComponent setAutoHeight(boolean autoHeight) {
         this.autoHeight = autoHeight;

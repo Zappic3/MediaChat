@@ -50,13 +50,16 @@ public class DownloadedMedia {
     }
 
     /**
-     * Generic - unknown cause of Error
-     * WHITELIST - requested URL is not whitelisted
-     * SIZE - requested media exceeds the size limit
-     * FORMAT - media is not a supported format
-     * API - an API returned an error code
+     * <ul>
+     *     <li>GENERIC - unknown cause of Error</li>
+     *     <li>WHITELIST - requested URL is not whitelisted</li>
+     *     <li>SIZE - requested media exceeds the size limit</li>
+     *     <li>FORMAT - media is not a supported format</li>
+     *     <li>API - an API returned an error code</li>
+     *     <li>INTERNET - no internet connection</li>
+     * </ul>
      */
     public enum DownloadError {
-        GENERIC, WHITELIST, SIZE, FORMAT, API
+        GENERIC, WHITELIST, SIZE, FORMAT, API, INTERNET
     }
 }

@@ -122,7 +122,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     }
 
     private ButtonComponent buildGifButton() {
-        ButtonComponent button = Components.button(Text.of("Browse Gifs"), buttonComponent -> {
+        ButtonComponent button = new UnfocusableButton(Text.of("Browse Gifs"), buttonComponent -> {
             openGifBrowser();
         });
         button.positioning(Positioning.relative(100, 100))

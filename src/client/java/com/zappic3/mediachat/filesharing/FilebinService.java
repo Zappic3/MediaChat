@@ -9,11 +9,14 @@ import net.minecraft.client.resource.language.I18n;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -64,7 +67,7 @@ public class FilebinService extends FileSharingService {
                     return null;
                 }
 
-            } catch (Exception e) {
+            }  catch (Exception e) {
                 LOGGER.error("Error uploading file to Filebin.net:\n{}", e.getMessage());
                 LOGGER.error(e.getMessage(), e);
             }
@@ -81,7 +84,7 @@ public class FilebinService extends FileSharingService {
                 .header("accept", "*/*")
                 .header("User-Agent", "Java HttpClient")
                 .header("Cookie", "verified=2024-05-24") // todo automatically update this
-                .timeout(Duration.ofSeconds(15))
+                .timeout(Duration.ofSeconds(5))
                 .GET()
                 .build();
 
@@ -150,6 +153,13 @@ public class FilebinService extends FileSharingService {
                 return new DownloadedMedia(image, reader.getFormatName().toLowerCase());
 
             }
+        } catch (HttpTimeoutException | ConnectException e) {
+            LOGGER.error("Error while downloading media element from Filebin.\n" +
+                    "Make sure you are connected to the internet");
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.internetError"));
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unknown host exception for {}", e.getMessage());
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.unknownHostError", e.getMessage()));
         } catch (Exception e) {
             return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, e.getMessage());
         } finally {

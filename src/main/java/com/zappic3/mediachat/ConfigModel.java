@@ -29,16 +29,16 @@ public class ConfigModel {
 
     public boolean autoWrapUrlsOnPasteShortcut = true;
 
-    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String startMediaUrl = "[";
 
-    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String endMediaUrl = "]";
 
     @SectionHeader("privacyOptions")
-    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
     public serverMediaNetworkingMode serverNetworkingMode = serverMediaNetworkingMode.FILES_ONLY;
 
     public boolean confirmUploadPopup = true;
