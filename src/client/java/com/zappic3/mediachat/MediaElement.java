@@ -1,9 +1,9 @@
 package com.zappic3.mediachat;
 
 import com.sksamuel.scrimage.nio.AnimatedGif;
-import com.zappic3.mediachat.filesharing.DownloadedGif;
-import com.zappic3.mediachat.filesharing.DownloadedMedia;
-import com.zappic3.mediachat.filesharing.FileSharingService;
+import com.zappic3.mediachat.filesharing.filesharing.DownloadedGif;
+import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
+import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import com.zappic3.mediachat.ui.MediaViewScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -18,20 +18,16 @@ import java.io.*;
 import java.net.URL;
 import java.net.URI;
 import java.time.Duration;
-import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import com.sksamuel.scrimage.ImmutableImage;
 
 import static com.zappic3.mediachat.CacheManager.isFileInCache;
 import static com.zappic3.mediachat.CacheManager.loadFileFromCache;
-import static com.zappic3.mediachat.MediaChat.LOGGER;
-import static com.zappic3.mediachat.MediaChat.CONFIG;
-import static com.zappic3.mediachat.MediaChat.MOD_ID;
+import static com.zappic3.mediachat.MediaChat.*;
 import static com.zappic3.mediachat.Utility.*;
 
 public class MediaElement {
@@ -41,6 +37,7 @@ public class MediaElement {
     private static final Identifier MEDIA_NOT_WHITELISTED =  Identifier.of(MOD_ID, "textures/media_not_whitelisted.png");
     private static final Identifier MEDIA_TOO_BIG =  Identifier.of(MOD_ID, "textures/media_too_big.png");
     private static final Identifier MEDIA_NO_INTERNET =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
+    private static final Identifier MEDIA_DOWNLOADING_FROM_SERVER = Identifier.of(MOD_ID, "textures/downloading_from_server.png");
 
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
     private static MediaElement _hoveredMediaElement = null;
@@ -177,6 +174,12 @@ public class MediaElement {
                 }
             }
 
+            // check if the downloading should be handled server-side
+            if (!MinecraftClient.getInstance().isInSingleplayer() && (CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.ALL) || CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.LINKS_ONLY))) {
+                LOGGER.info("IMAGE SHOULD BE DOWNLOADED BY SERVER");
+                MEDIA_CHANNEL.clientHandle().send(new NetworkManager.ServerboundMediaSyncRequestDownloadPacket(source));
+                return new MediaIdentifierInfo(MEDIA_DOWNLOADING_FROM_SERVER, 64, 64, -1);
+            }
 
             URL url = new URI(source).toURL();
             FileSharingService service = FileSharingService.getDownloadServiceFor(url);

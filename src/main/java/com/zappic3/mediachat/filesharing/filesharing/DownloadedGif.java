@@ -1,4 +1,4 @@
-package com.zappic3.mediachat.filesharing;
+package com.zappic3.mediachat.filesharing.filesharing;
 
 import com.sksamuel.scrimage.nio.AnimatedGif;
 
@@ -15,8 +15,8 @@ public class DownloadedGif extends DownloadedMedia {
         _originalGif = originalGif;
     }
 
-    public DownloadedGif(DownloadedMedia.DownloadError error, String errorMessage) {
-        super(error, errorMessage);
+    public DownloadedGif(DownloadedMedia.DownloadError error, String[] errorMessageVals) {
+        super(error, errorMessageVals);
         _delays = null;
         _originalGif = null;
     }

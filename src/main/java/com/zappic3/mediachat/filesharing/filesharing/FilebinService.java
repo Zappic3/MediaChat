@@ -1,11 +1,10 @@
-package com.zappic3.mediachat.filesharing;
+package com.zappic3.mediachat.filesharing.filesharing;
 
 import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.sksamuel.scrimage.nio.AnimatedGifReader;
 import com.sksamuel.scrimage.nio.ImageSource;
 import com.zappic3.mediachat.RandomString;
-import net.minecraft.client.resource.language.I18n;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
@@ -30,7 +29,7 @@ import javax.imageio.stream.ImageInputStream;
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
-public class FilebinService extends FileSharingService {
+public class FilebinService extends FileSharingService implements FileSharingService.FileSharingUpload {
     private final RandomString randomString;
     private final String bucketName;
     private final String userId;
@@ -91,7 +90,7 @@ public class FilebinService extends FileSharingService {
             HttpResponse<InputStream> filebinResponse = client.send(filebinRequest, HttpResponse.BodyHandlers.ofInputStream());
 
             if (filebinResponse.statusCode() != 302) {
-                return new DownloadedMedia(DownloadedMedia.DownloadError.API, I18n.translate("text.mediachat.media.tooltip.apiError", "filebin.net", filebinResponse.statusCode()));
+                return new DownloadedMedia(DownloadedMedia.DownloadError.API, new String[] {"filebin.net", filebinResponse.statusCode()+""});
             }
 
             // download the actual file
@@ -115,12 +114,12 @@ public class FilebinService extends FileSharingService {
             String contentType = mediaResponse.headers().firstValue("Content-Type").orElse("");
             if (!contentType.startsWith("image/")) {
                 client.shutdown();
-                return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError") + " (" + contentType + ")");
+                return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, new String[contentType.length()]);
             }
 
             long contentLength = mediaResponse.headers().firstValueAsLong("Content-Length").orElse(-1L);
             if (contentLength == -1L || contentLength > (long) CONFIG.maxMediaSize() * 1024 * 1024) {
-                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, I18n.translate("text.media.tooltip.sizeError", CONFIG.maxMediaSize()+"mb", ((contentLength/1024)/1024) + "mb"));
+                return new DownloadedMedia(DownloadedMedia.DownloadError.SIZE, new String[]{((contentLength/1024)/1024) + "mb"});
             }
 
             try (InputStream inputStream = mediaResponse.body();
@@ -128,7 +127,7 @@ public class FilebinService extends FileSharingService {
 
                 Iterator<ImageReader> readers = ImageIO.getImageReadersByMIMEType(contentType);
                 if (!readers.hasNext()) {
-                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT, I18n.translate("text.mediachat.media.tooltip.formatError"));
+                    return new DownloadedMedia(DownloadedMedia.DownloadError.FORMAT);
                 }
                 ImageReader reader = readers.next();
                 String format = reader.getFormatName().toLowerCase();
@@ -156,12 +155,12 @@ public class FilebinService extends FileSharingService {
         } catch (HttpTimeoutException | ConnectException e) {
             LOGGER.error("Error while downloading media element from Filebin.\n" +
                     "Make sure you are connected to the internet");
-            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.internetError"));
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET);
         } catch (UnknownHostException e) {
             LOGGER.error("Unknown host exception for {}", e.getMessage());
-            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, I18n.translate("text.mediachat.media.tooltip.unknownHostError", e.getMessage()));
+            return new DownloadedMedia(DownloadedMedia.DownloadError.INTERNET, new String[]{e.getMessage()});
         } catch (Exception e) {
-            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, e.getMessage());
+            return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC, new String[]{e.getMessage()});
         } finally {
             client.shutdown();
         }

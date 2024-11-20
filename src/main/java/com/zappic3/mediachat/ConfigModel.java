@@ -1,5 +1,6 @@
 package com.zappic3.mediachat;
 
+import blue.endless.jankson.Comment;
 import io.wispforest.owo.config.Option;
 import io.wispforest.owo.config.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 @Modmenu(modId = "media-chat")
 @Config(name = "mediachat", wrapperName = "MediaChatConfig")
 public class ConfigModel {
+    @Comment("Client Config Options:")
     @SectionHeader("generalOptions")
     @RangeConstraint(min = 200, max = 50000)
     public int maxRamUsage = 1000;
@@ -29,17 +31,18 @@ public class ConfigModel {
 
     public boolean autoWrapUrlsOnPasteShortcut = true;
 
-    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String startMediaUrl = "[";
 
-    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     @RegexConstraint("\\S{1,10}")
     public String endMediaUrl = "]";
 
     @SectionHeader("privacyOptions")
-    //@Sync(Option.SyncMode.OVERRIDE_CLIENT)
-    public serverMediaNetworkingMode serverNetworkingMode = serverMediaNetworkingMode.FILES_ONLY;
+    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    public serverMediaNetworkingMode serverNetworkingMode = serverMediaNetworkingMode.ALL;
+    //TODO: add the following options: WarnIfIpIsNotProtected, A an option to disable media from this server? an option to add the server to trust the server
 
     public boolean confirmUploadPopup = true;
 
@@ -70,9 +73,10 @@ public class ConfigModel {
 
     // NONE: clients download everything, files cant be directly shared through the server
     // FILES_ONLY: clients download media shared via url but files get uploaded to the server and distributed among clients
+    // LINKS_ONLY: server downloads and distribute media shared via link but files cant be uploaded directly
     // ALL: everything is downloaded by the server and distributed to the clients
     public enum serverMediaNetworkingMode {
-        NONE, FILES_ONLY, ALL
+        NONE, FILES_ONLY, LINKS_ONLY, ALL
     }
 
     public enum fileSharingServiceEnum {

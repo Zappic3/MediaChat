@@ -28,6 +28,10 @@
 		{
 			"config": "media-chat.client.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "media-chat.server.mixins.json",
+			"environment": "server"
 		}
 	],
 	"depends": {

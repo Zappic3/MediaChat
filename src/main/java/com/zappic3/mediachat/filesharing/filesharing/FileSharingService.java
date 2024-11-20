@@ -1,7 +1,7 @@
-package com.zappic3.mediachat.filesharing;
+package com.zappic3.mediachat.filesharing.filesharing;
 
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.text.Text;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
 
 import javax.imageio.stream.ImageInputStream;
 import java.io.ByteArrayInputStream;
@@ -32,7 +32,7 @@ public abstract class FileSharingService {
         return service.getDeclaredConstructor().newInstance();
     }
 
-    public static FileSharingService getUploadService() {
+    public static FileSharingUpload getUploadService() {
         switch (CONFIG.hostingService()) {
             default -> {
                 return new FilebinService();
@@ -41,13 +41,12 @@ public abstract class FileSharingService {
     }
 
      public DownloadedMedia downloadWithChecks(URL url) {
-        if (isUrlWhitelisted(url)) {
+        if (isUrlWhitelisted(url) || FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER) { // bypass whitelist check if the server is downloading data
             return download(url);
         }
-        return new DownloadedMedia(DownloadedMedia.DownloadError.WHITELIST, I18n.translate("text.mediachat.media.tooltip.whitelistError"));
+        return new DownloadedMedia(DownloadedMedia.DownloadError.WHITELIST);
     }
 
-    abstract public CompletableFuture<URL> upload(Path filePath);
     abstract protected DownloadedMedia download(URL url);
 
     private boolean isUrlWhitelisted(URL url) {
@@ -81,5 +80,9 @@ public abstract class FileSharingService {
             baos.write(buffer, 0, bytesRead);
         }
         return new ByteArrayInputStream(baos.toByteArray());
+    }
+
+    public interface FileSharingUpload {
+        CompletableFuture<URL> upload(Path filePath);
     }
 }

@@ -1,7 +1,7 @@
 package com.zappic3.mediachat.mixin.client;
 
 import com.zappic3.mediachat.IMediaChatPaste;
-import com.zappic3.mediachat.filesharing.FileSharingService;
+import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import com.zappic3.mediachat.ui.ConfirmUploadScreen;
 import com.zappic3.mediachat.ui.GifBrowserUI;
 import net.minecraft.client.MinecraftClient;
@@ -39,7 +39,7 @@ public class ChatScreenMixin extends Screen {
     public void filesDragged(List<Path> paths) {
         Runnable runnable = () -> {
             StringBuilder newChatField = new StringBuilder();
-            FileSharingService service = FileSharingService.getUploadService();
+            FileSharingService.FileSharingUpload service = FileSharingService.getUploadService();
 
             CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
