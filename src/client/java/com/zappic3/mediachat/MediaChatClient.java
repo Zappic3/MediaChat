@@ -1,6 +1,5 @@
 package com.zappic3.mediachat;
 
-import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.sksamuel.scrimage.nio.internal.GifSequenceReader;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
 import com.zappic3.mediachat.ui.GifBrowserUI;
@@ -91,7 +90,7 @@ public class MediaChatClient implements ClientModInitializer {
 					int status = reader.read(bais);
 					if (status == 0) {
 						// todo check if this code can be reused together with similar code from the defaultWebDownload class
-						List<Identifier> identifers = new ArrayList<>();
+						List<Identifier> identifiers = new ArrayList<>();
 						List<Long> delays = new ArrayList<>();
 						long size = 0;
 						int width = -1;
@@ -104,11 +103,11 @@ public class MediaChatClient implements ClientModInitializer {
 							}
 
 							Utility.IdentifierAndSize ias = registerTexture(image, message.mediaId() + "_" + i);
-							identifers.add(ias.identifier());
+							identifiers.add(ias.identifier());
 							size += ias.size();
 							delays.add((long) reader.getDelay(i));
 						}
-						MediaElement.update(message.mediaId(), identifers, delays, width, height, size);
+						MediaElement.update(message.mediaId(), identifiers, delays, width, height, size);
 						LOGGER.info("updated media element successfully (gif)");
 
 					} else {
