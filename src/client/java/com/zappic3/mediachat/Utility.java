@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -192,7 +193,7 @@ public class Utility {
     // Texture Loading
     // #######################
 
-    public static IdentifierAndSize registerTexture(BufferedImage bufferedImage, String fileName) throws Exception {
+    public static IdentifierAndSize registerTexture(BufferedImage bufferedImage, String fileName) throws IOException {
         // Convert BufferedImage to InputStream for NativeImage
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(bufferedImage, "png", baos); // Write the BufferedImage as a PNG into the ByteArrayOutputStream

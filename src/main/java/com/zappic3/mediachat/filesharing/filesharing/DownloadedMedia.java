@@ -1,13 +1,10 @@
 package com.zappic3.mediachat.filesharing.filesharing;
 
 import com.zappic3.mediachat.TranslationProvider;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.zappic3.mediachat.MediaChat.CONFIG;

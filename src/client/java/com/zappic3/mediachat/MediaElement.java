@@ -25,9 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.sksamuel.scrimage.ImmutableImage;
 
-import static com.zappic3.mediachat.CacheManager.isFileInCache;
-import static com.zappic3.mediachat.CacheManager.loadFileFromCache;
 import static com.zappic3.mediachat.MediaChat.*;
+import static com.zappic3.mediachat.MediaChatClient.CLIENT_CACHE;
 import static com.zappic3.mediachat.Utility.*;
 
 public class MediaElement {
@@ -37,7 +36,7 @@ public class MediaElement {
     private static final Identifier MEDIA_NOT_WHITELISTED =  Identifier.of(MOD_ID, "textures/media_not_whitelisted.png");
     private static final Identifier MEDIA_TOO_BIG =  Identifier.of(MOD_ID, "textures/media_too_big.png");
     private static final Identifier MEDIA_NO_INTERNET =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
-    private static final Identifier MEDIA_DOWNLOADING_FROM_SERVER = Identifier.of(MOD_ID, "textures/downloading_from_server.png");
+    private static final Identifier MEDIA_DOWNLOADING_FROM_SERVER = Identifier.of(MOD_ID, "textures/media_downloading_from_server.png");
 
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
     private static MediaElement _hoveredMediaElement = null;
@@ -54,7 +53,7 @@ public class MediaElement {
     // this is used to determine which textures to unload to free up ram
     private long _lastTimeUsed;
     private final Importance _importance;
-    private long _sizeInBit; // important: a value of -1 means that this MediaElement uses an internal texture that should not be unloaded
+    private long _sizeInBit; // important: a value of -1 means that this MediaElement uses an internal texture that should never be unloaded
     public enum Importance {
         HIGH(Duration.ofMinutes(30)),
         NORMAL(Duration.ofMinutes(10)),
@@ -143,13 +142,47 @@ public class MediaElement {
         return of(source, true, Importance.NORMAL);
     }
 
+    /**
+     * Changes the {@link Identifier} of an already existing {@link MediaElement}
+     * and all its associated information
+     *
+     * @param hash hash of the {@link MediaElement} that should be changed
+     * @param id the new {@link Identifier}
+     * @param width width of the image in px
+     * @param height height of the image in px
+     * @param sizeInBit filesize of the image in bits
+     */
+    public static void update(int hash, Identifier id, int width, int height, long sizeInBit) {
+        MediaElement element = _mediaPool.get(hash);
+        if (element != null) {
+            element.setIdentifier(id, width, height, sizeInBit);
+        }
+    }
+
+    public static void update(int hash, List<Identifier> ids, List<Long> delays, int width, int height, long sizeInBit) {
+        MediaElement element = _mediaPool.get(hash);
+        if (element != null) {
+            element.setIdentifier(ids, delays, width, height, sizeInBit);
+        }
+    }
+
+    public static void update(int hash, DownloadedMedia.DownloadError error) {
+        MediaElement element = _mediaPool.get(hash);
+        if (element != null) {
+            MediaIdentifierInfo mii = getErrorImageIdentifier(error);
+            element.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height(), mii.sizeInBit());
+            DownloadedMedia media = new DownloadedMedia(error); // little trick to get translated error messages
+            element.setErrorMessage(media.getErrorMessage());
+        }
+    }
+
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private MediaIdentifierInfo downloadMedia(String source, boolean saveToCache) {
         DownloadedMedia downloadedMedia;
 
         try {
-            if (isFileInCache(source.hashCode())) {
-                OneOfTwo<BufferedImage, AnimatedGif> result =  loadFileFromCache(source.hashCode());
+            if (CLIENT_CACHE.isFileInCache(source.hashCode())) {
+                OneOfTwo<BufferedImage, AnimatedGif> result =  CLIENT_CACHE.loadFileFromCache(source.hashCode());
                 if (result != null) {
                     if (result.getFirst() != null) {
                         Utility.IdentifierAndSize ias = registerTexture(result.getFirst(), source.hashCode()+"_"+0);
@@ -191,10 +224,10 @@ public class MediaElement {
                     if (CONFIG.cacheMedia() && saveToCache) {
                         switch (downloadedMedia) {
                             case DownloadedGif g:
-                                CacheManager.saveGifToCache(g.getOriginalGif(), source);
+                                CLIENT_CACHE.saveGifToCache(g.getOriginalGif(), source.hashCode());
                                 break;
                             default:
-                                CacheManager.saveMediaToCache(frames.getFirst(), source, downloadedMedia.getFormatName());
+                                CLIENT_CACHE.saveMediaToCache(frames.getFirst(), source.hashCode(), downloadedMedia.getFormatName());
                                 break;
                         }
                     }
@@ -218,37 +251,22 @@ public class MediaElement {
                 }
             } else if (downloadedMedia != null) {
                 this.setErrorMessage(downloadedMedia.getErrorMessage());
-                switch (downloadedMedia.getDownloadError()) {
-                    case FORMAT -> {
-                        return new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1);
-                    }
-                    case SIZE -> {
-                        return new MediaIdentifierInfo(MEDIA_TOO_BIG, 512, 512, -1);
-                    }
-                    case WHITELIST -> {
-                        return new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512, -1);
-                    }
-                    case INTERNET -> {
-                        return new MediaIdentifierInfo(MEDIA_NO_INTERNET, 512, 512, -1);
-                    }
-                    default -> {
-                        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
-                    }
-                }
+                return getErrorImageIdentifier(downloadedMedia.getDownloadError());
+
             } else {
                 this.setErrorMessage(I18n.translate("text.mediachat.media.tooltip.genericError"));
                 return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
             }
 
         } catch (IOException e) {
-            // handle IOException
+            // handle IOException //todo replace strings with translation keys
             LOGGER.error("Error Downloading Image: \n"+e.getMessage());
             setErrorMessage("Error Downloading Image: \n"+e.getMessage());
         } catch (Exception e) {
             LOGGER.error("Error while registering image: \n" + e.getMessage());
             setErrorMessage("Error while registering image: \n"+e.getMessage());
         }
-        return new MediaIdentifierInfo(Identifier.of(MOD_ID, "textures/image.png"), 64, 64, -1);
+        return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
     }
 
     // this is intended for loading media that was saved to disk on startup. //todo check if the url may be needed (e. g. whitelist checking)
@@ -408,6 +426,16 @@ public class MediaElement {
         this._frameDelays = delays;
         this._sizeInBit = sizeInBit;
         this.isAnimPlaying = true;
+    }
+
+    private static MediaIdentifierInfo getErrorImageIdentifier(DownloadedMedia.DownloadError error) {
+        return switch (error) {
+            case FORMAT -> new MediaIdentifierInfo(MEDIA_UNSUPPORTED, 512, 512, -1);
+            case SIZE -> new MediaIdentifierInfo(MEDIA_TOO_BIG, 512, 512, -1);
+            case WHITELIST -> new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512, -1);
+            case INTERNET -> new MediaIdentifierInfo(MEDIA_NO_INTERNET, 512, 512, -1);
+            default -> new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
+        };
     }
 
     public static void reactToMouseClick(int button, int action) {

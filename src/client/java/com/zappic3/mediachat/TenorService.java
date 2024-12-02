@@ -2,21 +2,18 @@ package com.zappic3.mediachat;
 
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.MinecraftClient;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 

@@ -14,7 +14,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -290,6 +289,7 @@ public abstract class ChatHudMixin {
         ChatHudLine.Visible currentMessage = messageList.get(currentMessagePos);
         String currentMessageContent = OrderedTextToString(currentMessage.content());
         Matcher matcher = Pattern.compile(getMediaMessageRegex()).matcher(currentMessageContent);
+        //todo replace this default image
         String mediaUrl = "https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png"; // default image
         if (matcher.find()) {
             mediaUrl = matcher.group(1);

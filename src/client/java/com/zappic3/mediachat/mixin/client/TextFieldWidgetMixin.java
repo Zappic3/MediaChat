@@ -15,9 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.zappic3.mediachat.MediaChat.CONFIG;
-import static com.zappic3.mediachat.MediaChat.LOGGER;
-
 @Mixin(TextFieldWidget.class)
 public class TextFieldWidgetMixin implements IMediaChatPaste {
     @Shadow

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.zappic3.mediachat.MediaChat.CONFIG;
+import static com.zappic3.mediachat.MediaChatClient.CLIENT_CACHE;
 
 @Mixin(DebugHud.class)
 public class DebugScreenMixin {
@@ -32,12 +33,12 @@ public class DebugScreenMixin {
 
 
             // cache
-            long rawCacheUsage = CacheManager.getCurrentCacheSize();
+            long rawCacheUsage = CLIENT_CACHE.getCurrentCacheSize();
             String formattedCacheUsage = Utility.formatBits(rawCacheUsage);
             long rawMaxCacheUsage = Utility.megabytesToBits(CONFIG.maxCacheSize());
             String formattedMaxCacheUsage = Utility.formatBits(rawMaxCacheUsage);
             float cacheUsagePercent = ((float) 100 / rawMaxCacheUsage) * rawCacheUsage;
-            int cachedElementCount = CacheManager.getCachedElementCount();
+            int cachedElementCount = CLIENT_CACHE.getCachedElementCount();
 
 
             List<String> modifiedDebugText = new ArrayList<>(debugText);

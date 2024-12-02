@@ -2,33 +2,42 @@ package com.zappic3.mediachat;
 
 import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.nio.*;
-import net.minecraft.util.Identifier;
+import net.fabricmc.loader.api.FabricLoader;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
-import static com.zappic3.mediachat.MediaChat.CONFIG;
-import static com.zappic3.mediachat.MediaChatClient.getModDataFolderPath;
-import static com.zappic3.mediachat.Utility.registerTexture;
 
 public class CacheManager {
-    private static long _currentCacheSize = 0;
-    private static List<File> _orderedListOfFiles = new ArrayList<>(); // sorting: oldest -> newest
+    private long _currentCacheSize = 0;
+    private List<File> _orderedListOfFiles = new ArrayList<>(); // sorting: oldest -> newest
 
-    private CacheManager() {}
+    private int _maxMediaSize;
+    private final Path _cacheFolder;
 
-    private static File getCacheFolder() {
-        return new File(getModDataFolderPath("cache").toUri());
+    public CacheManager(Path cacheFolder, int maxMediaSize) {
+        this._maxMediaSize = maxMediaSize;
+        this._cacheFolder = cacheFolder;
     }
 
-    public static void registerCachedTextures() {
+    private File getCacheFolder() {
+        Path folderPath = FabricLoader.getInstance().getGameDir().resolve("MediaChat").resolve(_cacheFolder);
+        try {
+            Files.createDirectories(folderPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return folderPath.toFile();
+    }
+
+    public void registerCachedTextures() {
         LOGGER.info("Registering textures from cache...");
         File folder = getCacheFolder();
         File[] filesArray = folder.listFiles();
@@ -45,15 +54,14 @@ public class CacheManager {
         }
     }
 
-    public static void saveMediaToCache(BufferedImage image, String source, String formatName) throws IOException {
-        File file = new File(getModDataFolderPath("cache") + File.separator + source.hashCode() + "." + formatName);
+    public void saveMediaToCache(BufferedImage image, int hash, String formatName) throws IOException {
+        File file = new File(getCacheFolder() + File.separator + hash + "." + formatName);
         ImageIO.write(image, formatName, file);
         enforceCacheSizeLimit(file);
     }
 
-    //todo: the same gif gets saved with different names. something with the hash must be wrong
-    public static void saveGifToCache(AnimatedGif gif, String source) throws IOException {
-        String filePath = getModDataFolderPath("cache") + File.separator + source.hashCode() + ".gif";
+    public void saveGifToCache(AnimatedGif gif, int hash) throws IOException {
+        String filePath = getCacheFolder() + File.separator + hash + ".gif";
         GifSequenceWriter writer = new GifSequenceWriter(gif.getDelay(0).toMillis(), true);
         ImmutableImage[] images = gif.getFrames().toArray(new ImmutableImage[0]);
         if (images != null) {
@@ -61,11 +69,11 @@ public class CacheManager {
         }
     }
 
-    private static void enforceCacheSizeLimit(File file) {
+    private void enforceCacheSizeLimit(File file) {
         _currentCacheSize += file.length();
         _orderedListOfFiles.addLast(file);
 
-        long maxCacheSize = (long) CONFIG.maxMediaSize() * 1024 * 1024;
+        long maxCacheSize = (long) this._maxMediaSize * 1024 * 1024;
         if (_currentCacheSize > maxCacheSize) {
             Iterator<File> iterator = _orderedListOfFiles.iterator();
             while (iterator.hasNext() && _currentCacheSize > maxCacheSize) {
@@ -77,12 +85,12 @@ public class CacheManager {
         }
     }
 
-    public static boolean isFileInCache(int hash) {
+    public boolean isFileInCache(int hash) {
         File[] matchingFiles = getCacheFolder().listFiles(getFilter(hash+""));
         return matchingFiles != null && matchingFiles.length > 0;
     }
 
-    public static OneOfTwo<BufferedImage, AnimatedGif> loadFileFromCache(int hash) {
+    public OneOfTwo<BufferedImage, AnimatedGif> loadFileFromCache(int hash) {
         File[] matchingFiles = getCacheFolder().listFiles(getFilter(hash+""));
 
         if (matchingFiles != null && matchingFiles.length > 0) {
@@ -107,7 +115,7 @@ public class CacheManager {
         return null;
     }
 
-    private static FilenameFilter getFilter(String filename) {
+    private FilenameFilter getFilter(String filename) {
         return (dir, name) -> {
             int dotIndex = name.lastIndexOf('.');
             String baseName = (dotIndex == -1) ? name : name.substring(0, dotIndex);
@@ -115,11 +123,11 @@ public class CacheManager {
         };
     }
 
-    public static int getCachedElementCount() {
+    public int getCachedElementCount() {
         return _orderedListOfFiles.size();
     }
 
-    public static long getCurrentCacheSize() {
+    public long getCurrentCacheSize() {
         return _currentCacheSize;
     }
 

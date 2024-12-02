@@ -9,7 +9,6 @@ import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.core.*;
 import io.wispforest.owo.ui.layers.Layers;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextHandler;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.text.*;

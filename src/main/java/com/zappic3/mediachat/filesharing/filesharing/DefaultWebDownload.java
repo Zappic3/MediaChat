@@ -49,7 +49,7 @@ public class DefaultWebDownload extends FileSharingService{
                 List<BufferedImage> frames = new ArrayList<>();
                 List<Long> delays = null;
 
-                // save in case it needs to be safed to disk
+                // save in case it needs to be saved to disk
                 AnimatedGif gif = null;
 
                 switch (formatName) {
@@ -70,13 +70,11 @@ public class DefaultWebDownload extends FileSharingService{
                 imageStream.close();
 
                 if (!frames.isEmpty() && frames.getFirst().getWidth() > 0 && frames.getFirst().getHeight() > 0) {
-                    if (CONFIG.cacheMedia()) { // todo check why exactly this check for cacheMedia is here
-                        switch (formatName) {
-                            case "gif":
-                                return new DownloadedGif(frames, delays, gif);
-                            default:
-                                return new DownloadedMedia(frames, formatName);
-                        }
+                    switch (formatName) {
+                        case "gif":
+                            return new DownloadedGif(frames, delays, gif);
+                        default:
+                            return new DownloadedMedia(frames, formatName);
                     }
                 } else {
                     return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
@@ -104,6 +102,5 @@ public class DefaultWebDownload extends FileSharingService{
                 connection.disconnect();
             }
         }
-        return new DownloadedMedia(DownloadedMedia.DownloadError.GENERIC);
     }
 }
