@@ -13,6 +13,7 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import org.apache.logging.log4j.core.jmx.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.zappic3.mediachat.NetworkManager.*;
@@ -39,7 +40,6 @@ public class MediaChat implements ModInitializer {
 	public static final OwoNetChannel MEDIA_CHANNEL = OwoNetChannel.create(Identifier.of(MOD_ID, "media_sync"));
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static final CacheManager SERVER_CACHE = new CacheManager(Path.of("MediaChatTempFiles"), 200); // todo load cache size from config
-	private final Map<UUID, DataAssembler> _uncompleteDataAssemblers = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
@@ -48,8 +48,8 @@ public class MediaChat implements ModInitializer {
 		// Proceed with mild caution.
 
 		sendStartupMessage();
-		registerNetworking();
 		registerCommands();
+		ServerNetworking.registerPackets();
 
 		// do some server only stuff
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
@@ -71,49 +71,6 @@ public class MediaChat implements ModInitializer {
 
 		int rnd = new Random().nextInt(messages.length);
 		LOGGER.info(messages[rnd]);
-	}
-
-	private void registerNetworking() {
-		MEDIA_CHANNEL.registerServerbound(ServerboundMediaSyncUploadImagePacket.class, (message, access) -> {
-			LOGGER.info("received upload message: "+message);
-			DataAssembler assembler = _uncompleteDataAssemblers.computeIfAbsent(message.mediaId(), k -> new DataAssembler(message.totalChunks()));
-			assembler.addChunk(message.currentChunk(), message.data());
-			// todo check conditions & disrupt upload if needed (e.g. package size)
-			if (assembler.isComplete()) {
-				try (ByteArrayInputStream bais = new ByteArrayInputStream(assembler.assemble())) {
-					BufferedImage image = ImageIO.read(bais);
-					String mediaLocator = "server:" + message.mediaId();
-					SERVER_CACHE.saveMediaToCache(image, mediaLocator.hashCode(), "png");
-					MEDIA_CHANNEL.serverHandle(access.player()).send(new ClientboundMediaSyncUploadResponsePacket(message.mediaId(), mediaLocator));
-				} catch (IOException e) {
-					//todo error handling
-				}
-            }
-
-
-		});
-
-		MEDIA_CHANNEL.registerServerbound(ServerboundMediaSyncRequestDownloadPacket.class, (message, access) -> {
-			LOGGER.info("received download message from "+access.player().getName().getString());
-			if (SERVER_CACHE.isFileInCache(message.mediaLocation().hashCode())) {
-				OneOfTwo<BufferedImage, AnimatedGif> data =  SERVER_CACHE.loadFileFromCache(message.mediaLocation().hashCode());
-				if (data.getFirst() != null) {
-					List<DataChunker.Chunk> chunks = new DataChunker(serializeBufferedImage(data.getFirst())).splitIntoChunks();
-					sendImageChunksToPlayers(message.mediaLocation(), chunks, Collections.singletonList(access.player()));
-				} else if (data.getSecond() != null) {
-					List<DataChunker.Chunk> chunks = new DataChunker(serializeAnimatedGif(data.getSecond())).splitIntoChunks();
-					sendImageChunksToPlayers(message.mediaLocation(), chunks, Collections.singletonList(access.player()));
-				}
-			} else {
-				CompletableFuture.runAsync(() -> requestDownload(message.mediaLocation(), access.player()));
-			}
-		});
-
-		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncUploadResponsePacket.class);
-		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadImagePacket.class);
-		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadGifPacket.class);
-		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadErrorPacket.class);
-
 	}
 
 	private void registerCommands() {
