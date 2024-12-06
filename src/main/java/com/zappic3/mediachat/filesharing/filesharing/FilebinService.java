@@ -41,7 +41,7 @@ public class FilebinService extends FileSharingService implements FileSharingSer
     }
 
     @Override
-    public CompletableFuture<URL> upload(Path filePath) {
+    public CompletableFuture<URI> upload(Path filePath) {
         //todo investigate 500 error when uploading files simultaneously
         String fileName = randomString.nextString();
         String predictedUrl = "https://filebin.net/"+bucketName+"/"+fileName;
@@ -59,7 +59,7 @@ public class FilebinService extends FileSharingService implements FileSharingSer
 
                 if (response.statusCode() == 201) {
                     LOGGER.info(response.body());
-                    return URI.create("https://filebin.net/"+bucketName+"/"+fileName).toURL();
+                    return URI.create("https://filebin.net/"+bucketName+"/"+fileName);
                 } else {
                     LOGGER.warn("Error uploading file to Filebin.net:\n{}", response.statusCode());
                     // todo: retry upload on fail

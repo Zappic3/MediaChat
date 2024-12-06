@@ -214,9 +214,9 @@ public class MediaElement {
                 return new MediaIdentifierInfo(MEDIA_DOWNLOADING_FROM_SERVER, 64, 64, -1);
             }
 
-            URL url = new URI(source).toURL();
-            FileSharingService service = FileSharingService.getDownloadServiceFor(url);
-            downloadedMedia = service.downloadWithChecks(url);
+            URI uri = new URI(source);
+            FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
+            downloadedMedia = service.downloadWithChecks(uri.toURL());
 
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 List<BufferedImage> frames = downloadedMedia.getDownloadedMedia();

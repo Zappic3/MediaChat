@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
@@ -50,20 +51,18 @@ public class ChatScreenMixin extends Screen {
                 newChatField.append(CONFIG.startMediaUrl()).append(uploadPlaceholder).append(CONFIG.endMediaUrl());
 
                 chain = chain.thenCompose(ignored -> {
-                    CompletableFuture<URL> future = service.upload(path);
+                    CompletableFuture<URI> future = service.upload(path);
 
-                    return future.thenAccept(url -> {
+                    return future.thenAccept(uri -> {
                         MinecraftClient.getInstance().execute(() -> {
                             Screen currentScreen = MinecraftClient.getInstance().currentScreen;
                             if (currentScreen instanceof ChatScreen) {
                                 TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
                                 String oldChatFieldText = currentChatField.getText();
-                                String newChatFieldText = oldChatFieldText.replaceAll(uploadPlaceholder, url.toString());
+                                String newChatFieldText = oldChatFieldText.replaceAll(uploadPlaceholder, uri.toString());
                                 int oldCursorPos = currentChatField.getCursor();
                                 currentChatField.setText(newChatFieldText);
-                                LOGGER.info(currentChatField.getCursor()+" :: " + oldCursorPos);
                                 currentChatField.setCursor(oldCursorPos + (newChatFieldText.length() - oldChatFieldText.length()), false);
-                                LOGGER.info(currentChatField.getCursor()+"");
                             }
                         });
                     });

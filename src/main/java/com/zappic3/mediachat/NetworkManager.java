@@ -7,16 +7,20 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.UUID;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
 public class NetworkManager {
 
     // client uploads media to the server
-    public record ServerboundMediaSyncUploadPacket(String image) {}
+    public record ServerboundMediaSyncUploadImagePacket(UUID mediaId, byte[] data, int currentChunk, int totalChunks) {}
+    public record ServerboundMediaSyncUploadGifPacket(UUID mediaId, byte[] data, int currentChunk, int totalChunks) {}
 
     // server returns new media locator of uploaded media
-    public record ClientboundMediaSyncUploadSuccessPacket(String mediaLocation) {}
+    public record ClientboundMediaSyncUploadResponsePacket(UUID mediaId, String mediaLocator) {}
+    public record ClientboundMediaSyncUploadErrorPacket(UUID mediaId, String errorMessage) {}
 
     // client requests media from server via a  link or locator
     public record ServerboundMediaSyncRequestDownloadPacket(String mediaLocation) {}

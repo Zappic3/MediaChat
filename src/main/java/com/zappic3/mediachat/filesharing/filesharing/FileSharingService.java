@@ -1,5 +1,6 @@
 package com.zappic3.mediachat.filesharing.filesharing;
 
+import com.zappic3.mediachat.ConfigModel;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -9,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -22,17 +24,26 @@ public abstract class FileSharingService {
         services.put("filebin.net", FilebinService.class);
     }
 
-    public static FileSharingService getDownloadServiceFor(URL url) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        String sanitizedUrl = sanitizeUrl(url.getHost());
+    public static FileSharingService getDownloadServiceFor(URI uri) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        String sanitizedUri = sanitizeUri(uri.getHost());
         //return services.get(sanitizedUrl).getDeclaredConstructor().newInstance();
-        Class<? extends FileSharingService> service = services.get(sanitizedUrl);
-        if (service == null) {
-            return new DefaultWebDownload();
+
+        if (uri.getScheme().equalsIgnoreCase("server")) {
+            return new ServerFileSharingService();
+        } else {
+            Class<? extends FileSharingService> service = services.get(sanitizedUri);
+            if (service == null) {
+                return new DefaultWebDownload();
+            }
+            return service.getDeclaredConstructor().newInstance();
         }
-        return service.getDeclaredConstructor().newInstance();
     }
 
     public static FileSharingUpload getUploadService() {
+        if (CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.ALL || CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.FILES_ONLY) { // todo add config option for client to otp out of server file uploading
+            return new ServerFileSharingService();
+        }
+
         switch (CONFIG.hostingService()) {
             default -> {
                 return new FilebinService();
@@ -51,10 +62,10 @@ public abstract class FileSharingService {
 
     private boolean isUrlWhitelisted(URL url) {
         if (CONFIG.useWhitelist()) {
-            String host = sanitizeUrl(url.getHost());
+            String host = sanitizeUri(url.getHost());
 
             for (String whitelistedDomain : CONFIG.whitelistedWebsites()) {
-                whitelistedDomain = sanitizeUrl(whitelistedDomain);
+                whitelistedDomain = sanitizeUri(whitelistedDomain);
                 if (host.equals(whitelistedDomain) || host.endsWith("." + whitelistedDomain)) {
                     return true;
                 }
@@ -64,8 +75,8 @@ public abstract class FileSharingService {
         return true;
     }
 
-    private static String sanitizeUrl(String url) {
-        String host =  url.toLowerCase().replaceFirst("\\.$", "");
+    private static String sanitizeUri(String uri) {
+        String host =  uri.toLowerCase().replaceFirst("\\.$", "");
         if (host.startsWith("www.")) {
             host = host.substring(4);
         }
@@ -83,6 +94,6 @@ public abstract class FileSharingService {
     }
 
     public interface FileSharingUpload {
-        CompletableFuture<URL> upload(Path filePath);
+        CompletableFuture<URI> upload(Path filePath);
     }
 }

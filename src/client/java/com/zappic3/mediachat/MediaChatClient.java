@@ -2,6 +2,7 @@ package com.zappic3.mediachat;
 
 import com.sksamuel.scrimage.nio.internal.GifSequenceReader;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
+import com.zappic3.mediachat.filesharing.filesharing.ServerFileSharingService;
 import com.zappic3.mediachat.ui.GifBrowserUI;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -54,8 +55,9 @@ public class MediaChatClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 
 		// register networking stuff
-		MEDIA_CHANNEL.registerClientbound(ClientboundMediaSyncUploadSuccessPacket.class, ((message, access) -> {
+		MEDIA_CHANNEL.registerClientbound(ClientboundMediaSyncUploadResponsePacket.class, ((message, access) -> {
 			LOGGER.info("received media sync upload success packet");
+			ServerFileSharingService.receiveServerResponsePacket(message.mediaId(), message);
 		}));
 
 		MEDIA_CHANNEL.registerClientbound(ClientboundMediaSyncDownloadImagePacket.class, ((message, access) -> {

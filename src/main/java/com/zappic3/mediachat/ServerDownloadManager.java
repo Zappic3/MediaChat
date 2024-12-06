@@ -57,14 +57,15 @@ public class ServerDownloadManager {
 
     private static void downloadMedia(String source, ServerPlayerEntity player) {
         try {
-            URL url = new URI(source).toURL();
-            FileSharingService service = FileSharingService.getDownloadServiceFor(url);
-            DownloadedMedia downloadedMedia = service.downloadWithChecks(url);
+            URI uri = new URI(source);
+            FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
+            DownloadedMedia downloadedMedia = service.downloadWithChecks(uri.toURL());
 
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 if(downloadedMedia instanceof DownloadedGif) {
                     AnimatedGif gif = ((DownloadedGif) downloadedMedia).getOriginalGif();
                     SERVER_CACHE.saveGifToCache(gif, source.hashCode());
+                    LOGGER.info("cached gif" + source);
                     byte[] gifBytes = serializeAnimatedGif(gif);
                     if (gifBytes != null) {
                         List<DataChunker.Chunk> chunks = new DataChunker(gifBytes).splitIntoChunks();
@@ -76,6 +77,7 @@ public class ServerDownloadManager {
                 } else {
                     BufferedImage image = downloadedMedia.getDownloadedMedia().getFirst();
                     SERVER_CACHE.saveMediaToCache(image, source.hashCode(), "png");
+                    LOGGER.info("cached image" + source);
                     byte[] imageBytes = serializeBufferedImage(image);
                     if (imageBytes != null) {
                         List<DataChunker.Chunk> chunks = new DataChunker(imageBytes).splitIntoChunks();

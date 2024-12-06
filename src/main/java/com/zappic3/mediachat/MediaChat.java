@@ -17,11 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.zappic3.mediachat.NetworkManager.*;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static com.zappic3.mediachat.NetworkManager.serializeAnimatedGif;
@@ -36,6 +39,7 @@ public class MediaChat implements ModInitializer {
 	public static final OwoNetChannel MEDIA_CHANNEL = OwoNetChannel.create(Identifier.of(MOD_ID, "media_sync"));
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static final CacheManager SERVER_CACHE = new CacheManager(Path.of("MediaChatTempFiles"), 200); // todo load cache size from config
+	private final Map<UUID, DataAssembler> _uncompleteDataAssemblers = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
@@ -70,8 +74,23 @@ public class MediaChat implements ModInitializer {
 	}
 
 	private void registerNetworking() {
-		MEDIA_CHANNEL.registerServerbound(ServerboundMediaSyncUploadPacket.class, (message, access) -> {
+		MEDIA_CHANNEL.registerServerbound(ServerboundMediaSyncUploadImagePacket.class, (message, access) -> {
 			LOGGER.info("received upload message: "+message);
+			DataAssembler assembler = _uncompleteDataAssemblers.computeIfAbsent(message.mediaId(), k -> new DataAssembler(message.totalChunks()));
+			assembler.addChunk(message.currentChunk(), message.data());
+			// todo check conditions & disrupt upload if needed (e.g. package size)
+			if (assembler.isComplete()) {
+				try (ByteArrayInputStream bais = new ByteArrayInputStream(assembler.assemble())) {
+					BufferedImage image = ImageIO.read(bais);
+					String mediaLocator = "server:" + message.mediaId();
+					SERVER_CACHE.saveMediaToCache(image, mediaLocator.hashCode(), "png");
+					MEDIA_CHANNEL.serverHandle(access.player()).send(new ClientboundMediaSyncUploadResponsePacket(message.mediaId(), mediaLocator));
+				} catch (IOException e) {
+					//todo error handling
+				}
+            }
+
+
 		});
 
 		MEDIA_CHANNEL.registerServerbound(ServerboundMediaSyncRequestDownloadPacket.class, (message, access) -> {
@@ -90,7 +109,7 @@ public class MediaChat implements ModInitializer {
 			}
 		});
 
-		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncUploadSuccessPacket.class);
+		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncUploadResponsePacket.class);
 		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadImagePacket.class);
 		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadGifPacket.class);
 		MEDIA_CHANNEL.registerClientboundDeferred(ClientboundMediaSyncDownloadErrorPacket.class);
@@ -104,14 +123,6 @@ public class MediaChat implements ModInitializer {
 					context.getSource().sendFeedback(() -> Text.literal( "hello " + player.getName().getString()), false);
 					return 1;
 				})
-				.then(literal("network")
-						.executes(context -> {
-							//MEDIA_CHANNEL.clientHandle().send(new ServerboundMediaSyncUploadPacket("Sent Package to Client"));
-							ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-							MEDIA_CHANNEL.serverHandle(player).send(new ClientboundMediaSyncUploadSuccessPacket("TEST"));
-							context.getSource().sendFeedback(() -> Text.literal("package sent"), false);
-							return 1;
-						}))
 				.then(literal("displayLoadedMedia")
 						.executes(context -> {
 							context.getSource().sendFeedback(() -> Text.literal("this is not implemented yet and you shouldn't be seeing this"), false);

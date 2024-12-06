@@ -19,7 +19,7 @@ public class CacheManager {
     private long _currentCacheSize = 0;
     private List<File> _orderedListOfFiles = new ArrayList<>(); // sorting: oldest -> newest
 
-    private int _maxMediaSize;
+    private int _maxMediaSize; // todo make this editable in the config options (the option already exists for clients but is currently broken)
     private final Path _cacheFolder;
 
     public CacheManager(Path cacheFolder, int maxMediaSize) {
@@ -64,9 +64,8 @@ public class CacheManager {
         String filePath = getCacheFolder() + File.separator + hash + ".gif";
         GifSequenceWriter writer = new GifSequenceWriter(gif.getDelay(0).toMillis(), true);
         ImmutableImage[] images = gif.getFrames().toArray(new ImmutableImage[0]);
-        if (images != null) {
-            writer.output(images, filePath);
-        }
+        writer.output(images, filePath);
+        enforceCacheSizeLimit(new File(filePath));
     }
 
     private void enforceCacheSizeLimit(File file) {
