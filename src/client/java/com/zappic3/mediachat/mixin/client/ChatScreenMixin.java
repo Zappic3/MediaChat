@@ -8,9 +8,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -54,17 +57,31 @@ public class ChatScreenMixin extends Screen {
                     CompletableFuture<URI> future = service.upload(path);
 
                     return future.thenAccept(uri -> {
-                        MinecraftClient.getInstance().execute(() -> {
-                            Screen currentScreen = MinecraftClient.getInstance().currentScreen;
-                            if (currentScreen instanceof ChatScreen) {
-                                TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
-                                String oldChatFieldText = currentChatField.getText();
-                                String newChatFieldText = oldChatFieldText.replaceAll(uploadPlaceholder, uri.toString());
-                                int oldCursorPos = currentChatField.getCursor();
-                                currentChatField.setText(newChatFieldText);
-                                currentChatField.setCursor(oldCursorPos + (newChatFieldText.length() - oldChatFieldText.length()), false);
-                            }
-                        });
+                        if (uri != null) {
+                            MinecraftClient.getInstance().execute(() -> {
+                                Screen currentScreen = MinecraftClient.getInstance().currentScreen;
+                                if (currentScreen instanceof ChatScreen) {
+                                    TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
+                                    String oldChatFieldText = currentChatField.getText();
+                                    String newChatFieldText = oldChatFieldText.replaceAll(uploadPlaceholder, uri.toString());
+                                    int oldCursorPos = currentChatField.getCursor();
+                                    currentChatField.setText(newChatFieldText);
+                                    currentChatField.setCursor(oldCursorPos + (newChatFieldText.length() - oldChatFieldText.length()), false);
+                                }
+                            });
+                        } else {
+                            LOGGER.error(service.getErrorMessage());
+                            displayErrorMessage(service.getErrorMessage());
+
+                        }
+                    }).exceptionally(ex -> {
+                        Throwable actualException = ex;
+                        if (actualException instanceof FileSharingService.DetailedCancellationException) { //todo check why the instanceof doesnt work + why the error type get also shown when getMessage())is used
+                            displayErrorMessage(actualException.getMessage());
+                        } else {
+                            displayErrorMessage("An error occurred during file upload: " + actualException.getMessage());
+                        }
+                        return null;
                     });
                 });
             }
@@ -81,6 +98,14 @@ public class ChatScreenMixin extends Screen {
             MinecraftClient.getInstance().setScreen(new ConfirmUploadScreen(chatField.getText(), runnable));
         } else {
             runnable.run();
+        }
+    }
+
+    @Unique
+    private void displayErrorMessage(String message) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player != null) {
+            player.sendMessage(Text.empty().formatted(Formatting.RED).append(message), false);
         }
     }
 

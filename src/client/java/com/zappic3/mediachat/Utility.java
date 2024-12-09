@@ -36,6 +36,7 @@ public class Utility {
     private final static String MESSAGE_TAG_REGEX = "#%s;[^#]*";         // detect any tag
 
     private final static String DETECT_MEDIA_MESSAGE_REGEX = "((?:https?:\\/\\/)?[-a-zA-Z0-9@:%._\\+~#=*]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_\\+.~#?&\\/\\/=*]*)";
+    private final static String DETECT_MEDIA_FROM_SERVER_REGEX = "(server:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"; // detects "server:<UUID>"
 
     public enum MESSAGE_TAG {
         BufferGenerated,
@@ -136,11 +137,18 @@ public class Utility {
     public static boolean isMediaMessage(String message, Boolean exactMatch) {
         String fullRegex =  Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_MESSAGE_REGEX + Pattern.quote(CONFIG.endMediaUrl());
         Pattern regex = Pattern.compile(fullRegex);
-        return exactMatch ? regex.matcher(message).matches() : regex.matcher(message).find();
+        boolean matched =  exactMatch ? regex.matcher(message).matches() : regex.matcher(message).find();
+
+        if (!matched) {
+            Pattern newRegex = Pattern.compile(Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_FROM_SERVER_REGEX + Pattern.quote(CONFIG.endMediaUrl()));
+            matched = exactMatch ? newRegex.matcher(message).matches() : newRegex.matcher(message).find();
+        }
+
+        return matched;
     }
 
     public static String getMediaMessageRegex() {
-        return Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_MESSAGE_REGEX + Pattern.quote(CONFIG.endMediaUrl());
+        return Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_MESSAGE_REGEX + Pattern.quote(CONFIG.endMediaUrl()) + "|" + Pattern.quote(CONFIG.startMediaUrl()) + DETECT_MEDIA_FROM_SERVER_REGEX + Pattern.quote(CONFIG.endMediaUrl());
     }
 
     public static OrderedText characterWithStyleToOrderedText(List<RawTextCollector.CharacterWithStyle> chars) {

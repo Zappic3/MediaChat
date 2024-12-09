@@ -8,10 +8,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
-import java.net.HttpURLConnection;
-import java.net.SocketTimeoutException;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -22,9 +19,10 @@ import static com.zappic3.mediachat.MediaChat.LOGGER;
 public class DefaultWebDownload extends FileSharingService{
     public DefaultWebDownload() {}
 
-    protected DownloadedMedia download(URL url) {
+    protected DownloadedMedia download(URI uri) {
         HttpURLConnection connection = null;
         try {
+            URL url = uri.toURL();
             connection = (HttpURLConnection) url.openConnection();
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);

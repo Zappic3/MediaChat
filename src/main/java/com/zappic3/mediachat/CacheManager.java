@@ -72,7 +72,7 @@ public class CacheManager {
         _currentCacheSize += file.length();
         _orderedListOfFiles.addLast(file);
 
-        long maxCacheSize = (long) this._maxMediaSize * 1024 * 1024;
+        long maxCacheSize = (long) this._maxMediaSize * 1024 * 1024 * 8;
         if (_currentCacheSize > maxCacheSize) {
             Iterator<File> iterator = _orderedListOfFiles.iterator();
             while (iterator.hasNext() && _currentCacheSize > maxCacheSize) {

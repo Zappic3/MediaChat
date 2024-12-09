@@ -80,6 +80,7 @@ public class DownloadedMedia {
             case INTERNET -> values.length == 0
                     ? provider.translate("text.mediachat.media.tooltip.internetError")
                     : provider.translate("text.mediachat.media.tooltip.unknownHostError", values[0]);
+            case NOT_FOUND -> provider.translate("text.mediachat.media.tooltip.notFoundError");
             default ->       values.length == 0
                     ? provider.translate("text.mediachat.media.tooltip.genericError")
                     : values[0];
@@ -94,10 +95,11 @@ public class DownloadedMedia {
      *     <li>FORMAT - media is not a supported format (s)</li>
      *     <li>API - an API returned an error code (s)</li>
      *     <li>INTERNET - no internet connection</li>
+     *     <li>NOT_FOUND - media not found (mostly for files saved to the game server) (s)</li>
      * </ul>
      * (s mark the errors that need to be handled on the dedicated server side)
      */
     public enum DownloadError {
-        GENERIC, WHITELIST, SIZE, FORMAT, API, INTERNET
+        GENERIC, WHITELIST, SIZE, FORMAT, API, INTERNET, NOT_FOUND
     }
 }

@@ -10,10 +10,19 @@ import java.util.List;
 @Modmenu(modId = "media-chat")
 @Config(name = "mediachat", wrapperName = "MediaChatConfig")
 public class ConfigModel {
+    // server side config options
+    @ExcludeFromScreen
+    @Comment("Server Config Options:")
+    public int serverMaxCacheSize = 200; // value in mb
+    @ExcludeFromScreen
+    @Sync(Option.SyncMode.OVERRIDE_CLIENT)
+    public int serverMaxFileSize = 30; // value in mb
+
+    // client & server:
     @Comment("Client Config Options:")
     @SectionHeader("generalOptions")
     @RangeConstraint(min = 200, max = 50000)
-    public int maxRamUsage = 1000;
+    public int maxRamUsage = 1000; // value in mb
 
     @RangeConstraint(min = 3, max = 15)
     public int mediaChatHeight = 5;
@@ -25,7 +34,7 @@ public class ConfigModel {
 
     public Boolean cacheMedia = true;
 
-    public int maxCacheSize = 200;
+    public int maxCacheSize = 200; // value in mb
 
     public boolean displayDebugScreenInfos = true;
 

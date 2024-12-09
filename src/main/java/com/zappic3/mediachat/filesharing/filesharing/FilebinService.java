@@ -33,6 +33,8 @@ public class FilebinService extends FileSharingService implements FileSharingSer
     private final RandomString randomString;
     private final String bucketName;
     private final String userId;
+    private boolean _hasError = false;
+    private String _errorMessage = null;
 
     public FilebinService() {
         randomString = new RandomString(20);
@@ -75,11 +77,11 @@ public class FilebinService extends FileSharingService implements FileSharingSer
     }
 
 
-    protected DownloadedMedia download(URL url) {
+    protected DownloadedMedia download(URI uri) {
         HttpClient client = HttpClient.newHttpClient();
         try {
             HttpRequest filebinRequest = HttpRequest.newBuilder()
-                .uri(url.toURI())
+                .uri(uri)
                 .header("accept", "*/*")
                 .header("User-Agent", "Java HttpClient")
                 .header("Cookie", "verified=2024-05-24") // todo automatically update this
@@ -164,5 +166,13 @@ public class FilebinService extends FileSharingService implements FileSharingSer
         } finally {
             client.shutdown();
         }
+    }
+
+    public boolean hasError() {
+        return _hasError;
+    }
+
+    public String getErrorMessage() {
+        return _errorMessage;
     }
 }

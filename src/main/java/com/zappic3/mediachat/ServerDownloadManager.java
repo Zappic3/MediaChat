@@ -59,7 +59,7 @@ public class ServerDownloadManager {
         try {
             URI uri = new URI(source);
             FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
-            DownloadedMedia downloadedMedia = service.downloadWithChecks(uri.toURL());
+            DownloadedMedia downloadedMedia = service.downloadWithChecks(uri);
 
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 if(downloadedMedia instanceof DownloadedGif) {

@@ -49,6 +49,7 @@
   "text.mediachat.media.tooltip.genericError": "an unknown error occurred",
   "text.mediachat.media.tooltip.internetError": "either you or the source server is offline",
   "text.mediachat.media.tooltip.unknownHostException": "Unknown host for %1$s",
+  "text.mediachat.media.tooltip.notFoundError": "Requested Media Element couldn't be found",
   "text.mediachat.gifBrowser.searchbarPlaceholder": "Search Tenor",
   "text.mediachat.tenorApiKeyTutorial.beginning" : "To obtain a Tenor API key follow these steps:",
   "text.mediachat.tenorApiKeyTutorial.1" : [

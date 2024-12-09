@@ -293,6 +293,9 @@ public abstract class ChatHudMixin {
         String mediaUrl = "https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png"; // default image
         if (matcher.find()) {
             mediaUrl = matcher.group(1);
+            if (mediaUrl == null) {
+                mediaUrl = matcher.group(2);
+            }
         }
         String messageChainId = randomStringGenerator.nextString();
         int lineCount = CONFIG.mediaChatHeight();

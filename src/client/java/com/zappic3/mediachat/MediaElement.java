@@ -208,7 +208,12 @@ public class MediaElement {
             }
 
             // check if the downloading should be handled server-side
-            if (!MinecraftClient.getInstance().isInSingleplayer() && (CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.ALL) || CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.LINKS_ONLY))) {
+            if ((!MinecraftClient.getInstance().isInSingleplayer()
+                    && (CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.ALL)
+                    || CONFIG.serverNetworkingMode().equals(ConfigModel.serverMediaNetworkingMode.LINKS_ONLY))
+                    && (!source.startsWith("https://media.tenor.com/")) // don't download tenor GIFs via the server to save bandwidth and performance
+                    ) || source.startsWith("server:")) {
+
                 LOGGER.info("IMAGE SHOULD BE DOWNLOADED BY SERVER");
                 MEDIA_CHANNEL.clientHandle().send(new NetworkManager.ServerboundMediaSyncRequestDownloadPacket(source));
                 return new MediaIdentifierInfo(MEDIA_DOWNLOADING_FROM_SERVER, 64, 64, -1);
@@ -216,7 +221,7 @@ public class MediaElement {
 
             URI uri = new URI(source);
             FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
-            downloadedMedia = service.downloadWithChecks(uri.toURL());
+            downloadedMedia = service.downloadWithChecks(uri);
 
             if (downloadedMedia != null && !downloadedMedia.hasError()) {
                 List<BufferedImage> frames = downloadedMedia.getDownloadedMedia();
@@ -435,6 +440,7 @@ public class MediaElement {
             case WHITELIST -> new MediaIdentifierInfo(MEDIA_NOT_WHITELISTED, 512, 512, -1);
             case INTERNET -> new MediaIdentifierInfo(MEDIA_NO_INTERNET, 512, 512, -1);
             default -> new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
+            //todo add missing error images (like for the NOT_FOUND error)
         };
     }
 

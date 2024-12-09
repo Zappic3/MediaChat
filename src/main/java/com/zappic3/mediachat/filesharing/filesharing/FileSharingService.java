@@ -14,12 +14,14 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 
 public abstract class FileSharingService {
     protected static HashMap<String, Class<? extends FileSharingService>> services = new HashMap<>();
+
     static {
         services.put("filebin.net", FilebinService.class);
     }
@@ -29,7 +31,9 @@ public abstract class FileSharingService {
         //return services.get(sanitizedUrl).getDeclaredConstructor().newInstance();
 
         if (uri.getScheme().equalsIgnoreCase("server")) {
-            return new ServerFileSharingService();
+            return new ServerFileSharingService(); // this service should never be used for downloading.
+                                                   // This is just here to make it easier to find potential bugs.
+                                                   // Actual server downloading logic is inside the MediaElement class
         } else {
             Class<? extends FileSharingService> service = services.get(sanitizedUri);
             if (service == null) {
@@ -51,18 +55,20 @@ public abstract class FileSharingService {
         }
     }
 
-     public DownloadedMedia downloadWithChecks(URL url) {
-        if (isUrlWhitelisted(url) || FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER) { // bypass whitelist check if the server is downloading data
-            return download(url);
+     public DownloadedMedia downloadWithChecks(URI uri) {
+        if (isUrlWhitelisted(uri) || FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER) { // bypass whitelist check if the server is downloading data
+            return download(uri);
         }
         return new DownloadedMedia(DownloadedMedia.DownloadError.WHITELIST);
     }
 
-    abstract protected DownloadedMedia download(URL url);
+    abstract protected DownloadedMedia download(URI uri);
 
-    private boolean isUrlWhitelisted(URL url) {
+    private boolean isUrlWhitelisted(URI uri) {
         if (CONFIG.useWhitelist()) {
-            String host = sanitizeUri(url.getHost());
+            if (uri.getScheme().equalsIgnoreCase("server")) {return true;} // cant exclude the server
+
+            String host = sanitizeUri(uri.getHost());
 
             for (String whitelistedDomain : CONFIG.whitelistedWebsites()) {
                 whitelistedDomain = sanitizeUri(whitelistedDomain);
@@ -74,6 +80,7 @@ public abstract class FileSharingService {
         }
         return true;
     }
+
 
     private static String sanitizeUri(String uri) {
         String host =  uri.toLowerCase().replaceFirst("\\.$", "");
@@ -95,5 +102,19 @@ public abstract class FileSharingService {
 
     public interface FileSharingUpload {
         CompletableFuture<URI> upload(Path filePath);
+        boolean hasError();
+        String getErrorMessage();
     }
+
+    public static class DetailedCancellationException extends CancellationException {
+        public DetailedCancellationException(String message) {
+            super(message);
+        }
+
+        @Override
+        public String getMessage() {
+            return super.getMessage();
+        }
+    }
+
 }

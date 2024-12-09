@@ -95,7 +95,7 @@ public class TenorService {
 
         return CompletableFuture.supplyAsync(() -> {
             try (HttpClient client = HttpClient.newHttpClient()) {
-                HttpRequest request = HttpRequest.newBuilder()
+                HttpRequest request = HttpRequest.newBuilder() // todo use smaller gifs so the loading time is shorter
                         .uri(URI.create(("https://tenor.googleapis.com/v2/search?key=%s&client_key=%s&locale=%s&q=%s&media_filter=gif,tinygif&limit=%d"+posArg)
                                 .formatted(CONFIG.tenorApiKey(), _clientKey, MinecraftClient.getInstance().options.language, cleanedQuery, result_count)))
                         .GET()
