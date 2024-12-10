@@ -57,7 +57,7 @@ public class ChatScreenMixin extends Screen {
                     CompletableFuture<URI> future = service.upload(path);
 
                     return future.thenAccept(uri -> {
-                        if (uri != null) {
+                        if (uri != null && !service.hasError()) {
                             MinecraftClient.getInstance().execute(() -> {
                                 Screen currentScreen = MinecraftClient.getInstance().currentScreen;
                                 if (currentScreen instanceof ChatScreen) {
@@ -70,9 +70,13 @@ public class ChatScreenMixin extends Screen {
                                 }
                             });
                         } else {
-                            LOGGER.error(service.getErrorMessage());
-                            displayErrorMessage(service.getErrorMessage());
-
+                            if (service.getErrorMessage() != null) {
+                                LOGGER.error(service.getErrorMessage());
+                                displayErrorMessage(service.getErrorMessage());
+                            } else {
+                                LOGGER.error("An error occurred while uploading file");
+                                displayErrorMessage("An error occurred while uploading file"); // todo localize
+                            }
                         }
                     }).exceptionally(ex -> {
                         Throwable actualException = ex;

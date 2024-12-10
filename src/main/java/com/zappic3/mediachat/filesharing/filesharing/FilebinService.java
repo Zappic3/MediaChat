@@ -64,14 +64,20 @@ public class FilebinService extends FileSharingService implements FileSharingSer
                     return URI.create("https://filebin.net/"+bucketName+"/"+fileName);
                 } else {
                     LOGGER.warn("Error uploading file to Filebin.net:\n{}", response.statusCode());
+                    _hasError = true;
+                    _errorMessage = "Error uploading file to Filebin.net: " + response.statusCode();
                     // todo: retry upload on fail
                     return null;
                 }
 
             }  catch (Exception e) {
                 LOGGER.error("Error uploading file to Filebin.net:\n{}", e.getMessage());
+                _hasError = true;
+                _errorMessage = "Error uploading file to Filebin.net: " + e.getMessage();
                 LOGGER.error(e.getMessage(), e);
             }
+            _hasError = true;
+            _errorMessage = "An error occurred while uploading file to Filebin.net";
             return null;
         });
     }
