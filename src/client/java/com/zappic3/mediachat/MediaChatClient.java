@@ -42,6 +42,7 @@ public class MediaChatClient implements ClientModInitializer {
 			registerConfigObserver();
 			addGifUIToChatScreen();
 			DownloadedMedia.setTranslationProvider(new ClientTranslationProvider());
+			ClientCommands.registerClientCommands();
 
 			MouseClickCallback.EVENT.register((window, button, action, mods) -> {
 				MediaElement.reactToMouseClick(button, action);

@@ -3,6 +3,7 @@
 	"package": "com.zappic3.mediachat.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
+		"ServerPlayerNetworkHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

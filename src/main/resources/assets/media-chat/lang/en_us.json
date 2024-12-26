@@ -106,6 +106,30 @@
       "text": "Either you or the Tenor API are offline. Check your internet connection",
       "color": "#FF5555"
     }
-  ]
-
+  ],
+  "text.mediachat.commands.whitelist.playerAdded": "Added %s to the MediaChat-Whitelist",
+  "text.mediachat.commands.blacklist.playerAdded": "Added %s to the MediaChat-Blacklist",
+  "text.mediachat.commands.whitelist.playerRemoved": "Removed %s from the MediaChat-Whitelist",
+  "text.mediachat.commands.blacklist.playerRemoved": "Removed %s from the MediaChat-Blacklist",
+  "text.mediachat.commands.whitelist.addFailed": "Player is already on the MediaChat-Whitelist",
+  "text.mediachat.commands.blacklist.addFailed": "Player is already on the MediaChat-Blacklist",
+  "text.mediachat.commands.whitelist.removeFailed": "Player is not on the MediaChat-Whitelist",
+  "text.mediachat.commands.blacklist.removeFailed": "Player is not on the MediaChat-Blacklist",
+  "text.mediachat.commands.whitelist.list": "There are %s MediaChat-Whitelisted player(s): %s",
+  "text.mediachat.commands.blacklist.list": "There are %s MediaChat-Blacklisted player(s): %s",
+  "text.mediachat.commands.whitelist.none": "There are no MediaChat-Whitelisted players",
+  "text.mediachat.commands.blacklist.none": "There are no MediaChat-Blacklisted players",
+  "text.mediachat.commands.whitelist.alreadyOn": "MediaChat-Whitelist is already turned on",
+  "text.mediachat.commands.blacklist.alreadyOn": "MediaChat-Blacklist is already turned on",
+  "text.mediachat.commands.whitelist.alreadyOff": "MediaChat-Whitelist is already turned off",
+  "text.mediachat.commands.blacklist.alreadyOff": "MediaChat-Blacklist is already turned off",
+  "text.mediachat.commands.whitelist.alreadyOff.blacklist": "MediaChat-Whitelist is already turned off (but the blacklist is on)",
+  "text.mediachat.commands.blacklist.alreadyOff.whitelist": "MediaChat-Blacklist is already turned off (but the whitelist is on)",
+  "text.mediachat.commands.whitelist.enabled": "MediaChat-Whitelist is now turned on",
+  "text.mediachat.commands.blacklist.enabled": "MediaChat-Blacklist is now turned on",
+  "text.mediachat.commands.whitelist.disabled": "MediaChat-Whitelist is now turned off",
+  "text.mediachat.commands.blacklist.disabled": "MediaChat-Blacklist is now turned off",
+  "text.mediachat.commands.whitelist.enabledOverBlacklist": "MediaChat-Whitelist is now turned on (disabled blacklist)",
+  "text.mediachat.commands.blacklist.enabledOverWhitelist": "MediaChat-Blacklist is now turned on (disabled whitelist)",
+  "text.mediachat.chatMessageBlocked": "You’re not allowed to send MediaChat messages. Contact a moderator if you think this is a mistake."
 }

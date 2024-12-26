@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
 
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
-import static com.zappic3.mediachat.Utility.*;
-import static com.zappic3.mediachat.Utility.MessageHasTagValue;
+import static com.zappic3.mediachat.MediaMessageUtility.*;
+import static com.zappic3.mediachat.MediaMessageUtility.MessageHasTagValue;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {

@@ -14,9 +14,19 @@ public class ConfigModel {
     @ExcludeFromScreen
     @Comment("Server Config Options:")
     public int serverMaxCacheSize = 200; // value in mb
+
     @ExcludeFromScreen
     @Sync(Option.SyncMode.OVERRIDE_CLIENT)
     public int serverMaxFileSize = 30; // value in mb
+
+    @ExcludeFromScreen
+    public List<PlayerListEntry> serverWhitelist = new ArrayList<>();
+
+    @ExcludeFromScreen
+    public List<PlayerListEntry> serverBlacklist = new ArrayList<>();
+
+    @ExcludeFromScreen
+    public ServerMediaPermissionMode serverMediaPermissionMode = ServerMediaPermissionMode.BLACKLIST;
 
     // client & server:
     @Comment("Client Config Options:")
@@ -90,5 +100,9 @@ public class ConfigModel {
 
     public enum fileSharingServiceEnum {
         FILEBIN_NET
+    }
+
+    public enum ServerMediaPermissionMode {
+        OFF, WHITELIST, BLACKLIST
     }
 }

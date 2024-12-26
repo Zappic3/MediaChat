@@ -1,6 +1,7 @@
 package com.zappic3.mediachat.mixin.client;
 
 import com.zappic3.mediachat.IMediaChatPaste;
+import com.zappic3.mediachat.MediaMessageUtility;
 import com.zappic3.mediachat.Utility;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -45,7 +46,7 @@ public class TextFieldWidgetMixin implements IMediaChatPaste {
 
     @Unique
     private String wrapUrls(String input) {
-        String regex = Utility.getURLDetectionRegex();
+        String regex = MediaMessageUtility.getURLDetectionRegex();
 
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
