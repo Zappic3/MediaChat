@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.MediaMessageUtility.*;
-import static com.zappic3.mediachat.MediaMessageUtility.MessageHasTagValue;
+import static com.zappic3.mediachat.MediaMessageUtility.addMessageTag;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {
@@ -59,8 +59,10 @@ public abstract class ChatHudMixin {
     @Redirect(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"))
     public int drawTextWithShadow(DrawContext instance, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
-        String plainMessage = OrderedTextToString(text);
-
+        String plainMessage = orderedTextToString(text);
+        if (plainMessage == null) {
+            LOGGER.info("null");
+        }
         // clear the currently hovered message if it's not currently visible (aka it didn't render this cycle)
         if (getLowestMessage().content().equals(text)) { // the if statement checks that this is the last message being rendered, so that this will only run once every render-cycle
             if (MediaElement.hovered() != null && !(renderedMediaElements.contains(MediaElement.hovered().elementId()))) {
@@ -74,82 +76,96 @@ public abstract class ChatHudMixin {
             hasRenderedMediaElement = false;
         }
 
-
-
         // if the message contains the media starting element, isolate the message
-        if (plainMessage.contains(CONFIG.startMediaUrl()) && !MessageHasTag(text, MESSAGE_TAG.MessageID) && !isMediaMessage(plainMessage, true)) {
+        if (plainMessage.contains(CONFIG.startMediaUrl()) && !messageHasTag(text, MESSAGE_TAG.MessageID) && !isMediaMessage(plainMessage, true)) {
             isolateMediaMessage(getMessagePos(text));
         }
 
-        if (isMediaMessage(plainMessage, true) && !MessageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
+        if (isMediaMessage(plainMessage, true) && !messageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
             // init newly received media message
             for (int i = 0; i < visibleMessages.size(); ++i) {
                 ChatHudLine.Visible visible = visibleMessages.get(i);
-                if (visible.content() == text && !MessageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
+                if (visible.content() == text && !messageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
                     initMessageStructure(visibleMessages, i);
                     break;
                 }
             }
 
-        } else if (MessageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight())) {
-            //the message height has been changed in the options, needs to be corrected
-            // todo this is broken (probably because of the new message detection & isolation)
-            // todo: rethink the chat line buffer height approach, because wide images have too much buffer, which makes it look wierd (maybe buffer is max, but use less lines if they are not needed?)
-            int oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
-            int newSize = CONFIG.mediaChatHeight();
-            if (newSize < oldSize) {scrolledLines = Math.max(scrolledLines-(oldSize - newSize), 0);}
+        } else if ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight()))
+                || messageHasTagValue(text, MESSAGE_TAG.LowestOfBuffer) && !plainMessage.startsWith((CONFIG.mediaChatHeight()-1)+"#")) {
 
-            List<ChatHudLine.Visible> newVisibleMessages = new ArrayList<>();
-            boolean foundCurrentMessage = false;
-            int currentMessageIndex = 0;
-            boolean finishedCurrentMessage = false;
-            for (int i = 0; i < visibleMessages.size()-1; i++) {
-                ChatHudLine.Visible visible = visibleMessages.get(visibleMessages.size()-1-i);
-                if (!foundCurrentMessage) {
-                    if (visible.content() == text) {
-                        foundCurrentMessage = true;
-                        ChatHudLine.Visible visibleWithoutTag = new ChatHudLine.Visible(
-                                visible.addedTime(),
-                                MessageRemoveTag(visible.content(), MESSAGE_TAG.BufferGenerated),
-                                visible.indicator(),
-                                visible.endOfEntry());
-                        newVisibleMessages.addFirst(visibleWithoutTag);
-                    } else {
-                        newVisibleMessages.addFirst(visible);
-                    }
-                } else if (!finishedCurrentMessage) {
-                    if (MessageHasTag(visible.content(), MESSAGE_TAG.LowestOfBuffer)) {
-                        finishedCurrentMessage = true;
-                    } else if (!MessageHasTag(visible.content(), MESSAGE_TAG.Buffer)) {
-                        newVisibleMessages.addFirst(visible);
-                    }
-                } else {
-                    newVisibleMessages.addFirst(visible);
-                    currentMessageIndex += 1;
+            //the message height has been changed in the options, needs to be corrected
+            int oldSize = -1;
+            if ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight()))) {
+                oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
+            } else {
+                int index = plainMessage.indexOf("#");
+                if (index != -1) {
+                    oldSize = Integer.parseInt(plainMessage.substring(0, index))+1;
                 }
             }
-            if (foundCurrentMessage) {
-                initMessageStructure(newVisibleMessages, currentMessageIndex);
-                visibleMessages.clear();
-                visibleMessages.addAll(newVisibleMessages);
-            } else {
-                LOGGER.error("Error adjusting media buffer size!\nIf this error persists, try relogging / clearing chat.");
+
+            //get the position of the lowest line of this MediaMessage
+            String messageId = getMessageTagValue(text, MESSAGE_TAG.MessageID);
+            int lowestOfBufferIndex = -1;
+
+            for (int i = 0; i < visibleMessages.size(); ++i) {
+                ChatHudLine.Visible visible = visibleMessages.get(i);
+                OrderedText message = visible.content();
+                String currentMessageId = getMessageTagValue(message, MESSAGE_TAG.MessageID);
+
+                if (currentMessageId != null && currentMessageId.equals(messageId)) {
+                    if (messageHasTagValue(message, MESSAGE_TAG.LowestOfBuffer)) {
+                        lowestOfBufferIndex = i;
+                        break;
+                    }
+                }
             }
 
+            if (oldSize != -1 && lowestOfBufferIndex != -1) {
+                int newSize = CONFIG.mediaChatHeight();
+                ChatHudLine.Visible lowestOfBuffer = visibleMessages.get(lowestOfBufferIndex);
 
-        } else if (MessageHasTag(text, MESSAGE_TAG.LowestOfBuffer) || isLowestMessage(text)) {
-            // render the image, if the current message is the lowest visible of the "message chain"
+                if (newSize > oldSize) {
+                    // add new buffer lines
+                    for (int i = oldSize; i < newSize; i++) {
+                        OrderedText message = addMessageTagValue((i-1)+"", MESSAGE_TAG.MessageID, messageId);
+                        ChatHudLine.Visible visible = new ChatHudLine.Visible(lowestOfBuffer.addedTime(), addMessageTag(message, MESSAGE_TAG.Buffer), lowestOfBuffer.indicator(), false);
+                        visibleMessages.add(lowestOfBufferIndex+1, visible);
+                    }
+                } else {
+                    //remove buffer lines
+                    for (int i = oldSize; i > newSize; i--) {
+                        visibleMessages.remove(lowestOfBufferIndex+1);
+                    }
+                }
+                // update lowest of buffer with new value
+                String[] parts = orderedTextToString(lowestOfBuffer.content()).split("#", 2);
+                String newContent = newSize-1 + "#" + parts[1];
+                ChatHudLine.Visible editedLowestOfBuffer = new ChatHudLine.Visible(lowestOfBuffer.addedTime(), stringToOrderedText(newContent), lowestOfBuffer.indicator(), lowestOfBuffer.endOfEntry());
+                visibleMessages.set(lowestOfBufferIndex, editedLowestOfBuffer);
+
+                // update top of buffer with new value
+                int topOfBufferIndex = lowestOfBufferIndex + newSize;
+                ChatHudLine.Visible oldTopOfBuffer = visibleMessages.get(topOfBufferIndex);
+                OrderedText newTopOfBufferContent = setMessageTagValue(oldTopOfBuffer.content(), MESSAGE_TAG.BufferGenerated, newSize+"");
+                ChatHudLine.Visible newTopOfBuffer = new ChatHudLine.Visible(oldTopOfBuffer.addedTime(), newTopOfBufferContent, oldTopOfBuffer.indicator(), oldTopOfBuffer.endOfEntry());
+                visibleMessages.set(topOfBufferIndex, newTopOfBuffer);
+            }
+
+        } else if (messageHasTag(text, MESSAGE_TAG.LowestOfBuffer) || isLowestMessage(text)) {
+            // render the image if the current message is the lowest visible of the "message chain"
             String imageSource = "";
             int lineShift = 0;
 
-            if (MessageHasTag(text, MESSAGE_TAG.LowestOfBuffer)) {
+            if (messageHasTag(text, MESSAGE_TAG.LowestOfBuffer)) {
                 imageSource = getMessageTagValue(text, MESSAGE_TAG.LowestOfBuffer);
             } else {
                 OrderedText lowestVisibleMsg = getLowestMessage().content();
                 String messageId = getMessageTagValue(lowestVisibleMsg, MESSAGE_TAG.MessageID);
                 for (int i = scrolledLines; i >= 0; i--) {
                     OrderedText currentMsg = visibleMessages.get(i).content();
-                    if ((MessageHasTag(currentMsg, MESSAGE_TAG.LowestOfBuffer)) && Objects.equals(getMessageTagValue(currentMsg, MESSAGE_TAG.MessageID), messageId)) {
+                    if ((messageHasTag(currentMsg, MESSAGE_TAG.LowestOfBuffer)) && Objects.equals(getMessageTagValue(currentMsg, MESSAGE_TAG.MessageID), messageId)) {
                         imageSource  = getMessageTagValue(currentMsg, MESSAGE_TAG.LowestOfBuffer);
                         lineShift = scrolledLines - i;
                         break;
@@ -175,7 +191,7 @@ public abstract class ChatHudMixin {
             }
 
         } else {
-            if (!(MessageHasTag(text, MESSAGE_TAG.MessageID)) || CONFIG.debugOptions.renderHiddenChatMessages()) {
+            if (!(messageHasTag(text, MESSAGE_TAG.MessageID)) || CONFIG.debugOptions.renderHiddenChatMessages()) {
                 instance.drawTextWithShadow(textRenderer, text, x, y, color);
             }
         }
@@ -204,7 +220,7 @@ public abstract class ChatHudMixin {
                 RawTextCollector.removeLeadingWhitespace(currentMsgAsChars);
                 concMsg.addAll(currentMsgAsChars);
                 toDelete.add(i);
-                if (OrderedTextToString(currentMsg).contains(CONFIG.endMediaUrl())) {
+                if (orderedTextToString(currentMsg).contains(CONFIG.endMediaUrl())) {
                     break;
                 }
             }
@@ -275,7 +291,7 @@ public abstract class ChatHudMixin {
 
     @Unique
     private boolean isLowestMessage(OrderedText text) {
-        return  (getLowestMessage().content() == text) && (MessageHasTag(text, MESSAGE_TAG.MessageID));
+        return  (getLowestMessage().content() == text) && (messageHasTag(text, MESSAGE_TAG.MessageID));
     }
 
     @Unique
@@ -287,7 +303,7 @@ public abstract class ChatHudMixin {
     @Unique
     private void initMessageStructure(List<ChatHudLine.Visible> messageList, int currentMessagePos) {
         ChatHudLine.Visible currentMessage = messageList.get(currentMessagePos);
-        String currentMessageContent = OrderedTextToString(currentMessage.content());
+        String currentMessageContent = orderedTextToString(currentMessage.content());
         Matcher matcher = Pattern.compile(getMediaMessageRegex()).matcher(currentMessageContent);
         //todo replace this default image
         String mediaUrl = "https://www.minecraft.net/content/dam/games/minecraft/screenshots/PLAYTOGETHERPDPScreenshotRefresh2024_exitingPortal_01.png"; // default image
@@ -300,7 +316,7 @@ public abstract class ChatHudMixin {
         String messageChainId = randomStringGenerator.nextString();
         int lineCount = CONFIG.mediaChatHeight();
         if (lineCount >= 1) {
-            OrderedText sanitizedText = StringToOrderedText(currentMessageContent.substring(CONFIG.startMediaUrl().length(), CONFIG.endMediaUrl().length())); // remove start and end media tag to prevent infinite loops
+            OrderedText sanitizedText = stringToOrderedText(currentMessageContent.substring(CONFIG.startMediaUrl().length(), CONFIG.endMediaUrl().length())); // remove start and end media tag to prevent infinite loops
             messageList.add(currentMessagePos+1, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTagValues(sanitizedText, Arrays.asList(MESSAGE_TAG.MessageID, MESSAGE_TAG.BufferGenerated), Arrays.asList(messageChainId, CONFIG.mediaChatHeight()+"")), currentMessage.indicator(), true));
             OrderedText message = addMessageTagValue("0", MESSAGE_TAG.MessageID, messageChainId);
             messageList.set(currentMessagePos, new ChatHudLine.Visible(currentMessage.addedTime(), addMessageTag(message, MESSAGE_TAG.Buffer), currentMessage.indicator(), false));
@@ -329,7 +345,7 @@ public abstract class ChatHudMixin {
     @Unique
     private boolean renderTextureAndCheckIfHovered(DrawContext context, MinecraftClient client,  Identifier texture, int x, int y, int width, int height, float maxWidth, float maxHeight, float heightBuffer, float opacity) {
         boolean isTextureHovered = false;
-        int corrected_width = 4 * width;
+        int corrected_width = 4 * width;       // IDK why the size needs to be multiplied by 4
         int corrected_height = 4 * height;
 
         MatrixStack matrices = context.getMatrices();

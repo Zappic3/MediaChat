@@ -33,11 +33,11 @@ public class MediaMessageUtility {
 
     public static OrderedText addMessageTag(String text, MESSAGE_TAG tag) {
         String resultText = text + MESSAGE_TAG_FORMAT.formatted(tagToString(tag));
-        return StringToOrderedText(resultText);
+        return stringToOrderedText(resultText);
     }
 
     public static OrderedText addMessageTag(OrderedText text, MESSAGE_TAG tag) {
-        String plainText = OrderedTextToString(text);
+        String plainText = orderedTextToString(text);
         return addMessageTag(plainText, tag);
     }
 
@@ -52,23 +52,23 @@ public class MediaMessageUtility {
     }
 
     public static OrderedText addMessageTagValue(OrderedText text, MESSAGE_TAG tag, String value) {
-        String plainText = OrderedTextToString(text);
+        String plainText = orderedTextToString(text);
         return addMessageTagValue(plainText, tag, value);
     }
 
     public static OrderedText addMessageTagValue(String text, MESSAGE_TAG tag, String value) {
-        return StringToOrderedText(text + MESSAGE_TAG_VALUE_FORMAT.formatted(tagToString(tag), value));
+        return stringToOrderedText(text + MESSAGE_TAG_VALUE_FORMAT.formatted(tagToString(tag), value));
     }
 
-    public static boolean MessageHasTag(OrderedText text, MESSAGE_TAG tag) {
-        String plainText = OrderedTextToString(text);
+    public static boolean messageHasTag(OrderedText text, MESSAGE_TAG tag) {
+        String plainText = orderedTextToString(text);
         return plainText.contains(MESSAGE_TAG_FORMAT.formatted(tagToString(tag)));
     }
 
-    public static boolean MessageHasTagValue(OrderedText text, MESSAGE_TAG tag) {
-        if (MessageHasTag(text, tag)) {
+    public static boolean messageHasTagValue(OrderedText text, MESSAGE_TAG tag) {
+        if (messageHasTag(text, tag)) {
             Pattern pattern = Pattern.compile(MESSAGE_TAG_VALUE_REGEX.formatted(tagToString(tag)));
-            Matcher matcher = pattern.matcher(OrderedTextToString(text));
+            Matcher matcher = pattern.matcher(orderedTextToString(text));
             return matcher.find();
         }
         return false;
@@ -76,17 +76,35 @@ public class MediaMessageUtility {
 
     public static String getMessageTagValue(OrderedText text, MESSAGE_TAG tag) {
         Pattern pattern = Pattern.compile(MESSAGE_TAG_VALUE_REGEX.formatted(tagToString(tag)));
-        Matcher matcher = pattern.matcher(OrderedTextToString(text));
+        Matcher matcher = pattern.matcher(orderedTextToString(text));
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    public static OrderedText MessageRemoveTag(OrderedText text, MESSAGE_TAG tag) {
-        String plainText = OrderedTextToString(text);
+    public static OrderedText removeMessageTag(OrderedText text, MESSAGE_TAG tag) {
+        String plainText = orderedTextToString(text);
         String resultText = plainText.replaceAll(MESSAGE_TAG_REGEX.formatted(tagToString(tag)), "");
-        return StringToOrderedText(resultText);
+        return stringToOrderedText(resultText);
     }
 
-    public static String OrderedTextToString(OrderedText text) {
+    public static OrderedText removeMessageTagValue(OrderedText text, MESSAGE_TAG tag) {
+        String plainText = orderedTextToString(text);
+        String resultText = plainText.replaceAll(MESSAGE_TAG_VALUE_REGEX.formatted(tagToString(tag)), "");
+        return stringToOrderedText(resultText);
+    }
+
+    public static OrderedText setMessageTagValue(OrderedText text, MESSAGE_TAG tag, String value) {
+        String plainText = orderedTextToString(text);
+        Pattern pattern = Pattern.compile(MESSAGE_TAG_VALUE_REGEX.formatted(tagToString(tag)));
+        Matcher matcher = pattern.matcher(plainText);
+        if (matcher.find()) {
+            String updatedTag = matcher.group(0).replace(matcher.group(1), value);
+            String result = matcher.replaceFirst(updatedTag);
+            return stringToOrderedText(result);
+        }
+        return null;
+    }
+
+    public static String orderedTextToString(OrderedText text) {
         RawTextCollector textCollector = new RawTextCollector();
         text.accept(textCollector);
         return textCollector.getText();
@@ -98,7 +116,7 @@ public class MediaMessageUtility {
         return textCollector.getCharactersWithStyles();
     }
 
-    public static OrderedText StringToOrderedText(String text) {
+    public static OrderedText stringToOrderedText(String text) {
         return Language.getInstance().reorder(Text.of(text));
     }
 
