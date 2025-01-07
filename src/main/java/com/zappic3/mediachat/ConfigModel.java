@@ -1,6 +1,7 @@
 package com.zappic3.mediachat;
 
 import blue.endless.jankson.Comment;
+import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import io.wispforest.owo.config.Option;
 import io.wispforest.owo.config.annotation.*;
 
@@ -63,9 +64,8 @@ public class ConfigModel {
     public serverMediaNetworkingMode serverNetworkingMode = serverMediaNetworkingMode.ALL;
     //TODO: add the following options: WarnIfIpIsNotProtected, A an option to disable media from this server? an option to add the server to trust the server
 
-    public boolean confirmUploadPopup = true;
-
-    public fileSharingServiceEnum hostingService = fileSharingServiceEnum.FILEBIN_NET;
+    public FileSharingService.FileHostingService defaultHostingService = FileSharingService.FileHostingService.NONE;
+    public boolean useLocalMinecraftServerForHostingIfPossible = true;
 
     public boolean useWhitelist = false;
     //@RegexConstraint("^(?!.*\\.\\.)(?!.*(^\\.|\\.$)).+?\\..+$")
@@ -96,10 +96,6 @@ public class ConfigModel {
     // ALL: everything is downloaded by the server and distributed to the clients
     public enum serverMediaNetworkingMode {
         NONE, FILES_ONLY, LINKS_ONLY, ALL
-    }
-
-    public enum fileSharingServiceEnum {
-        FILEBIN_NET
     }
 
     public enum ServerMediaPermissionMode {

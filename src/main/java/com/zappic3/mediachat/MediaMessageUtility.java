@@ -24,7 +24,8 @@ public class MediaMessageUtility {
         BufferGenerated,
         Buffer,
         LowestOfBuffer,
-        MessageID
+        MessageID,
+        MaxLines
     }
 
     private static String tagToString(MESSAGE_TAG tag) {

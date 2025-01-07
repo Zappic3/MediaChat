@@ -14,6 +14,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,7 +29,6 @@ import java.util.regex.Pattern;
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.MediaMessageUtility.*;
-import static com.zappic3.mediachat.MediaMessageUtility.addMessageTag;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {
@@ -51,6 +51,7 @@ public abstract class ChatHudMixin {
     @Shadow @Final
     private List<ChatHudLine> messages;
 
+    @Shadow @Final private static Logger LOGGER;
     @Unique
     private List<UUID> renderedMediaElements = new ArrayList<>();
     @Unique
@@ -81,6 +82,8 @@ public abstract class ChatHudMixin {
             isolateMediaMessage(getMessagePos(text));
         }
 
+        int targetMessageLineCount = targetMessageLineCount(text);
+
         if (isMediaMessage(plainMessage, true) && !messageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
             // init newly received media message
             for (int i = 0; i < visibleMessages.size(); ++i) {
@@ -90,18 +93,22 @@ public abstract class ChatHudMixin {
                     break;
                 }
             }
-
-        } else if ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight()))
-                || messageHasTagValue(text, MESSAGE_TAG.LowestOfBuffer) && !plainMessage.startsWith((CONFIG.mediaChatHeight()-1)+"#")) {
+        } else if (targetMessageLineCount != -1 && ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != targetMessageLineCount))
+                || (messageHasTagValue(text, MESSAGE_TAG.LowestOfBuffer) && !plainMessage.startsWith((targetMessageLineCount-1)+"#")))) {
 
             //the message height has been changed in the options, needs to be corrected
             int oldSize = -1;
-            if ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != CONFIG.mediaChatHeight()))) {
+            if ((messageHasTagValue(text, MESSAGE_TAG.BufferGenerated) && (Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated)) != targetMessageLineCount))) {
+                if (messageHasTagValue(text, MESSAGE_TAG.MaxLines)) {
+
+                }
                 oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
             } else {
                 int index = plainMessage.indexOf("#");
                 if (index != -1) {
-                    oldSize = Integer.parseInt(plainMessage.substring(0, index))+1;
+                    if (!plainMessage.substring(0, index).isEmpty()) {
+                        oldSize = Integer.parseInt(plainMessage.substring(0, index)) + 1;
+                    }
                 }
             }
 
@@ -123,7 +130,7 @@ public abstract class ChatHudMixin {
             }
 
             if (oldSize != -1 && lowestOfBufferIndex != -1) {
-                int newSize = CONFIG.mediaChatHeight();
+                int newSize = targetMessageLineCount;
                 ChatHudLine.Visible lowestOfBuffer = visibleMessages.get(lowestOfBufferIndex);
 
                 if (newSize > oldSize) {
@@ -176,16 +183,39 @@ public abstract class ChatHudMixin {
             y = y + calculateChatHeight(lineShift);
             int alpha = (color >> 24) & 0xFF;
             int y1 = y + calculateChatHeight(1);
-            int y2 = y-calculateChatHeight(CONFIG.mediaChatHeight());
+            int y2 = y-calculateChatHeight(targetMessageLineCount);
             MediaElement mediaElement = MediaElement.of(imageSource);
             // set media element message tag value for later use
             renderedMediaElements.add(mediaElement.elementId());
 
             float ySpace = Math.abs(y1-y2);
             float xSpace = client.inGameHud.getChatHud().getWidth() * CONFIG.maxMediaWidth();
-            boolean textureHovered = renderTextureAndCheckIfHovered(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, 5, alpha / 255.0F);
+            int heightBuffer = 5;
+            boolean textureHovered = renderTextureAndCheckIfHovered(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, heightBuffer, alpha / 255.0F);
             updateHoveredStatus(mediaElement, textureHovered);
 
+            // calculate and update the maximally necessary vertical height (number of lines)
+            float maxNeededHeight = (mediaElement.height()*4) * (xSpace / ((mediaElement.width()*4)+heightBuffer)); // the 4 is the same as the value applied in the renderTextureAndCheckIfHovered method.
+            int maxNeededChatLines = (int) Math.ceil(maxNeededHeight / calculateChatHeight(1))-1; // subtract one line, because the first line doesn't count towards this limit
+
+            int index = plainMessage.indexOf("#");
+            if (index != -1) {
+                int topMessageIndex = getMessagePos(text) + Integer.parseInt(plainMessage.substring(0, index))+1;
+                ChatHudLine.Visible visible = visibleMessages.get(topMessageIndex);
+                OrderedText topMessageContent = visible.content();
+                if (messageHasTagValue(topMessageContent, MESSAGE_TAG.MaxLines)) {
+                    int oldMaxLines = Integer.parseInt(getMessageTagValue(topMessageContent, MESSAGE_TAG.MaxLines));
+                    if (oldMaxLines != maxNeededChatLines) {
+                        OrderedText newTopMessage = setMessageTagValue(topMessageContent, MESSAGE_TAG.MaxLines, maxNeededChatLines+"");
+                        visibleMessages.set(topMessageIndex, new ChatHudLine.Visible(visible.addedTime(), newTopMessage, visible.indicator(), visible.endOfEntry()));
+                    }
+                } else {
+                    OrderedText newTopMessage = addMessageTagValue(topMessageContent, MESSAGE_TAG.MaxLines, maxNeededChatLines+"");
+                    visibleMessages.set(topMessageIndex, new ChatHudLine.Visible(visible.addedTime(), newTopMessage, visible.indicator(), visible.endOfEntry()));
+                }
+            }
+
+            // display image
             if (CONFIG.debugOptions.renderHiddenChatMessages()) {
                 instance.drawTextWithShadow(textRenderer, text, x, y, color);
             }
@@ -339,6 +369,40 @@ public abstract class ChatHudMixin {
         double chatLineSpacing = (Double) client.options.getChatLineSpacing().getValue();
         int lineHeight = this.getLineHeight();
         return (int) ((chatLineSpacing + lineHeight) * numberOfLines);
+    }
+
+    @Unique
+    private int targetMessageLineCount(OrderedText text) {
+        OrderedText topMessage = null;
+        int currentMessageIndex = getMessagePos(text);
+
+
+        if (messageHasTag(text, MESSAGE_TAG.MessageID) && currentMessageIndex != -1) {
+            if (!messageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
+                String textString = orderedTextToString(text);
+                int index = textString.indexOf("#");
+                if (index != -1) {
+                    int topMessageIndex = currentMessageIndex + Integer.parseInt(textString.substring(0, index))+1;
+                    ChatHudLine.Visible visible = visibleMessages.get(topMessageIndex);
+                    topMessage = visible.content();
+                }
+            } else {
+                topMessage = text;
+            }
+
+            if (topMessage != null) {
+                String maxLines = null;
+                if (messageHasTagValue(topMessage, MESSAGE_TAG.MaxLines)) {
+                    maxLines = getMessageTagValue(topMessage, MESSAGE_TAG.MaxLines);
+                }
+
+                if (maxLines != null) {
+                    return Math.min(Integer.parseInt(maxLines), CONFIG.mediaChatHeight());
+                }
+                return CONFIG.mediaChatHeight();
+            }
+        }
+        return -1;
     }
 
     // todo: find out why images with transparency lose quality on hover. Example: https://cdn.pixabay.com/photo/2017/09/01/00/15/png-2702691_1280.png

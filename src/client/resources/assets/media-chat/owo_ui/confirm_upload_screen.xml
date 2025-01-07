@@ -4,34 +4,87 @@
         <flow-layout direction="vertical">
             <children>
                 <label>
-                    <text>This Server doesn't allow file uploading.</text>
+                    <horizontal-text-alignment>center</horizontal-text-alignment>
+                    <text translate="true">text.mediachat.confirmUploadScreen.text</text>
+                    <positioning type="relative">50,0</positioning>
                 </label>
-                <label>
-                    <text>Upload the files to filebin.net to share them instead?</text>
+                <label id="popup_reason">
+                    <text/>
+                    <color>red</color>
+                    <positioning type="relative">50,5</positioning>
                 </label>
+
+                <flow-layout direction="vertical">
+                    <children>
+                        <label>
+                            <text translate="true">text.mediachat.confirmUploadScreen.selectionTitle</text>
+                        </label>
+                        <flow-layout direction="vertical">
+                            <children>
+                                <scroll direction="vertical">
+                                    <flow-layout direction="vertical" id="scrolling_selection">
+                                        <children>
+                                        </children>
+                                    </flow-layout>
+                                    <sizing><vertical method="fill">80</vertical></sizing>
+                                </scroll>
+                            </children>
+                            <surface>
+                                <panel dark="true"/>
+                            </surface>
+                            <padding>
+                                <all>3</all>
+                            </padding>
+                        </flow-layout>
+                        <label id="currently_selected_text">
+                            <text translate="true">text.mediachat.confirmUploadScreen.currentlySelected</text>
+                        </label>
+                    </children>
+                    <horizontal-alignment>left</horizontal-alignment>
+                    <vertical-alignment>top</vertical-alignment>
+                    <sizing>
+                        <vertical method="fill">67</vertical>
+                        <horizontal method="fill">30</horizontal>
+                    </sizing>
+                    <positioning type="relative">50,40</positioning>
+                </flow-layout>
+
+                <checkbox id="remember_checkbox">
+                    <text translate="true">text.mediachat.confirmUploadScreen.dontAskAgainCheckbox</text>
+                    <positioning type="relative">50,90</positioning>
+                </checkbox>
+
                 <flow-layout direction="horizontal">
                     <children>
                         <button id="yes_button">
-                            <text>Yes</text>
+                            <text translate="true">text.mediachat.confirmUploadScreen.button.upload</text>
+                            <sizing>
+                                <horizontal method="fill">20</horizontal>
+                            </sizing>
+                            <margins>
+                                <horizontal>5</horizontal>
+                            </margins>
                         </button>
                         <button id="no_button">
-                            <text>No</text>
+                            <text translate="true">text.mediachat.confirmUploadScreen.button.cancel</text>
+                            <sizing>
+                                <horizontal method="fill">20</horizontal>
+                            </sizing>
+                            <margins>
+                                <horizontal>5</horizontal>
+                            </margins>
                         </button>
                     </children>
-
                     <horizontal-alignment>center</horizontal-alignment>
                     <vertical-alignment>center</vertical-alignment>
-
-                    <padding>
-                        <all>10</all>
-                    </padding>
-
+                    <positioning type="relative">50,100</positioning>
                 </flow-layout>
             </children>
-
             <vertical-alignment>center</vertical-alignment>
             <horizontal-alignment>center</horizontal-alignment>
-
+            <padding>
+                <all>10</all>
+            </padding>
             <surface>
                 <vanilla-translucent/>
             </surface>

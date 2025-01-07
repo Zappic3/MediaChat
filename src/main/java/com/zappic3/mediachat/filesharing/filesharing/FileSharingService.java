@@ -11,13 +11,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import static com.zappic3.mediachat.MediaChat.CONFIG;
+import static com.zappic3.mediachat.MediaChat.LOGGER;
 
 public abstract class FileSharingService {
     protected static HashMap<String, Class<? extends FileSharingService>> services = new HashMap<>();
@@ -43,16 +43,16 @@ public abstract class FileSharingService {
         }
     }
 
-    public static FileSharingUpload getUploadService() {
-        if (CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.ALL || CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.FILES_ONLY) { // todo add config option for client to otp out of server file uploading
-            return new ServerFileSharingService();
+    public static FileSharingUpload getUploadService(FileHostingService service) {
+        if (service == null || service == FileHostingService.NONE) {
+            LOGGER.error("FileHostingService requested for invalid target: {}", service);
         }
 
-        switch (CONFIG.hostingService()) {
-            default -> {
-                return new FilebinService();
-            }
-        }
+        return switch (service) {
+            case FILEBIN_NET -> new FilebinService();
+            case MINECRAFT_SERVER -> new ServerFileSharingService();
+            case null, default -> new FilebinService();
+        };
     }
 
      public DownloadedMedia downloadWithChecks(URI uri) {
@@ -117,4 +117,9 @@ public abstract class FileSharingService {
         }
     }
 
+    public enum FileHostingService {
+        NONE,
+        MINECRAFT_SERVER,
+        FILEBIN_NET
+    }
 }

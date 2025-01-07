@@ -1,10 +1,12 @@
 package com.zappic3.mediachat.mixin.client;
 
+import com.zappic3.mediachat.ConfigModel;
 import com.zappic3.mediachat.IMediaChatPaste;
 import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import com.zappic3.mediachat.ui.ConfirmUploadScreen;
 import com.zappic3.mediachat.ui.GifBrowserUI;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -24,6 +26,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.zappic3.mediachat.MediaChat.*;
 import static net.minecraft.client.util.InputUtil.GLFW_KEY_ESCAPE;
@@ -34,6 +37,8 @@ public class ChatScreenMixin extends Screen {
     @Shadow
     protected TextFieldWidget chatField;
 
+    @Shadow private ChatInputSuggestor chatInputSuggestor;
+
     // this is necessary because of "extends Screen"
     protected ChatScreenMixin(Text title) {
         super(title);
@@ -41,10 +46,9 @@ public class ChatScreenMixin extends Screen {
 
     @Override
     public void filesDragged(List<Path> paths) {
-        Runnable runnable = () -> {
+        Consumer<FileSharingService.FileHostingService> consumer = (selectedService) -> {
             StringBuilder newChatField = new StringBuilder();
-            FileSharingService.FileSharingUpload service = FileSharingService.getUploadService();
-
+            FileSharingService.FileSharingUpload service = FileSharingService.getUploadService(selectedService);
             CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
             int i = 0;
@@ -98,10 +102,17 @@ public class ChatScreenMixin extends Screen {
             }
         };
 
-        if (CONFIG.confirmUploadPopup()) {
-            MinecraftClient.getInstance().setScreen(new ConfirmUploadScreen(chatField.getText(), runnable));
+        if ((CONFIG.defaultHostingService() == FileSharingService.FileHostingService.NONE)
+                || ((CONFIG.defaultHostingService() == FileSharingService.FileHostingService.MINECRAFT_SERVER)
+                && (CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.NONE
+                || CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.LINKS_ONLY))) {
+            MinecraftClient.getInstance().setScreen(new ConfirmUploadScreen(chatField.getText(), consumer));
         } else {
-            runnable.run();
+            if (CONFIG.useLocalMinecraftServerForHostingIfPossible() && (CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.ALL || CONFIG.serverNetworkingMode() == ConfigModel.serverMediaNetworkingMode.FILES_ONLY)) {
+                consumer.accept(FileSharingService.FileHostingService.MINECRAFT_SERVER);
+            } else {
+                consumer.accept(CONFIG.defaultHostingService());
+            }
         }
     }
 

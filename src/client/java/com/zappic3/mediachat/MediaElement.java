@@ -214,7 +214,6 @@ public class MediaElement {
                     && (!source.startsWith("https://media.tenor.com/")) // don't download tenor GIFs via the server to save bandwidth and performance
                     ) || source.startsWith("server:")) {
 
-                LOGGER.info("IMAGE SHOULD BE DOWNLOADED BY SERVER");
                 MEDIA_CHANNEL.clientHandle().send(new NetworkManager.ServerboundMediaSyncRequestDownloadPacket(source));
                 return new MediaIdentifierInfo(MEDIA_DOWNLOADING_FROM_SERVER, 64, 64, -1);
             }
