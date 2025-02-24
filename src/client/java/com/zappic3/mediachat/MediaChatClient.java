@@ -1,8 +1,6 @@
 package com.zappic3.mediachat;
 
-import com.sksamuel.scrimage.nio.internal.GifSequenceReader;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
-import com.zappic3.mediachat.filesharing.filesharing.ServerFileSharingService;
 import com.zappic3.mediachat.ui.GifBrowserUI;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -10,24 +8,12 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.ActionResult;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-import com.zappic3.mediachat.NetworkManager.*;
-import net.minecraft.util.Identifier;
-
-import javax.imageio.ImageIO;
 
 import static com.zappic3.mediachat.ConfigControls.registerConfigObserver;
 import static com.zappic3.mediachat.MediaChat.*;
-import static com.zappic3.mediachat.Utility.registerTexture;
 import static com.zappic3.mediachat.ui.GifBrowserUI.addGifUIToChatScreen;
 
 

@@ -13,6 +13,7 @@ import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -20,10 +21,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.zappic3.mediachat.MediaChat.CONFIG;
-import static com.zappic3.mediachat.MediaChat.LOGGER;
+import static com.zappic3.mediachat.MediaChat.*;
 
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
+    private static final Identifier NO_INTERNET =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
+    private static final Identifier INVALID_API_KEY =  Identifier.of(MOD_ID, "textures/media_too_big.png");
+
     private static final Text searchBarDefaultText = Text.translatable("text.mediachat.gifBrowser.searchbarPlaceholder");
     private boolean searchbarIsDefault;
     private static GifBrowserUI _currentInstance;
@@ -104,7 +107,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
         layout.child(searchbar)
         .child(
-                Containers.verticalScroll(Sizing.fill(), Sizing.fill(),
+                Containers.verticalScroll(Sizing.fill(), Sizing.expand(),
                         Containers.verticalFlow(Sizing.content(), Sizing.content()).child(
                             Containers.horizontalFlow(Sizing.fill(), Sizing.content())
                                     .child(Containers.verticalFlow(Sizing.expand(50), Sizing.content()).id("gif-container-left"))
@@ -266,7 +269,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                     int columnWidth = column != null ? column.width() : 50;
                     preview.setColumnWidth(columnWidth);
                     TenorService.MediaFormat gifData = result.media_formats().tinygif();
-                    preview.addGifWidget(gifData.url(), gifData.dims(), result.media_formats().gif().url(), null, result.id());
+                    preview.addGifWidget(gifData.url(), gifData.dims(), result.media_formats().mediumgif().url(), null, result.id());
                 });
                 MinecraftClient.getInstance().execute(() -> {
                     try {
@@ -298,13 +301,17 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     private void displayError(TenorService.connectionStatus connection) {
         _searchEnabled = false;
         Text rawMsg;
+        Identifier errorImageIdentifier;
 
         if (connection.equals(TenorService.connectionStatus.INVALID_API_KEY)) {
             rawMsg = Text.translatable("text.mediachat.gifBrowser.apiKeyError");
+            errorImageIdentifier = INVALID_API_KEY;
         } else if (connection.equals(TenorService.connectionStatus.NO_INTERNET)) {
             rawMsg = Text.translatable("text.mediachat.gifBrowser.connectionError");
+            errorImageIdentifier = NO_INTERNET;
         } else {
             rawMsg = Text.of("??? - If you're seeing this, you found a new and exiting bug!");
+            errorImageIdentifier = NO_INTERNET;
         }
 
         FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
@@ -314,14 +321,22 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         _root.clearChildren();
         _root.child(layout);
 
+        int textMargin = 5;
+        TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 512, 512);
+        errorImage.positioning(Positioning.relative(50, 0)).margins(Insets.of(textMargin));
+        layout.child(errorImage);
 
         LabelComponent label = Components.label(rawMsg);
-                //.horizontalTextAlignment(HorizontalAlignment.CENTER)
-                //.verticalTextAlignment(VerticalAlignment.CENTER);
-        //label.positioning(Positioning.relative(0, 0));
-        //label.sizing(Sizing.expand(), Sizing.fill());
-        LOGGER.info("layout width: " + layout.width() + ", label width: " + label.width());
+        label.maxWidth(layout.width()-(textMargin*2))
+                .horizontalTextAlignment(HorizontalAlignment.CENTER)
+                .positioning(Positioning.relative(50, 25))
+                .margins(Insets.of(textMargin));
+
+        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {});
+        reloadButton.positioning(Positioning.relative(50, 70));
+
         layout.child(label);
+        layout.child(reloadButton);
 
         _gifBrowserOpen = false; // todo this is a quick-fix, because when the warning is closed, but the chat screen not exited, the gif category screen wont refresh for some reason
 
