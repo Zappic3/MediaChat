@@ -1,6 +1,5 @@
 package com.zappic3.mediachat.mixin.client;
 
-import com.zappic3.mediachat.CacheManager;
 import com.zappic3.mediachat.MediaElement;
 import com.zappic3.mediachat.Utility;
 import net.minecraft.client.gui.hud.DebugHud;

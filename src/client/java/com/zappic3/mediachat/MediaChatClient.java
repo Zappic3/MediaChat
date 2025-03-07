@@ -18,7 +18,7 @@ import static com.zappic3.mediachat.ui.GifBrowserUI.addGifUIToChatScreen;
 
 
 public class MediaChatClient implements ClientModInitializer {
-	public static final CacheManager CLIENT_CACHE = new CacheManager(Path.of("cache"), CONFIG.maxCacheSize());
+	public static final SizeLimitedCache CLIENT_CACHE = new SizeLimitedCache(MediaCache.getModRoot().resolve("cache"), CONFIG.maxCacheSize());
 	private long _lastSlowUpdate = System.currentTimeMillis();
 	private Duration _slowUpdateInterval = Duration.ofSeconds(5);
 

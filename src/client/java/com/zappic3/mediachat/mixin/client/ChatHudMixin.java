@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.zappic3.mediachat.MediaElement;
 import com.zappic3.mediachat.RandomString;
 import com.zappic3.mediachat.RawTextCollector;
+import com.zappic3.mediachat.ui.FavoriteWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -68,11 +69,13 @@ public abstract class ChatHudMixin {
         if (getLowestMessage().content().equals(text)) { // the if statement checks that this is the last message being rendered, so that this will only run once every render-cycle
             if (MediaElement.hovered() != null && !(renderedMediaElements.contains(MediaElement.hovered().elementId()))) {
                 MediaElement.hovered(null);
+                FavoriteWidget.resetHover();
             }
             renderedMediaElements.clear();
             // clear the current hovered message, if no message is being hovered
             if (!hasRenderedMediaElement && MediaElement.hovered() != null) {
                 MediaElement.hovered(null);
+                FavoriteWidget.resetHover();
             }
             hasRenderedMediaElement = false;
         }
@@ -191,7 +194,7 @@ public abstract class ChatHudMixin {
             float ySpace = Math.abs(y1-y2);
             float xSpace = client.inGameHud.getChatHud().getWidth() * CONFIG.maxMediaWidth();
             int heightBuffer = 5;
-            boolean textureHovered = renderTextureAndCheckIfHovered(instance, client, mediaElement.currentFrame(), x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, heightBuffer, alpha / 255.0F);
+            boolean textureHovered = renderTextureAndCheckIfHovered(instance, client, mediaElement, x, y2, mediaElement.width(), mediaElement.height(), xSpace, ySpace, heightBuffer, alpha / 255.0F);
             updateHoveredStatus(mediaElement, textureHovered);
 
             // calculate and update the maximally necessary vertical height (number of lines)
@@ -407,7 +410,8 @@ public abstract class ChatHudMixin {
 
     // todo: find out why images with transparency lose quality on hover. Example: https://cdn.pixabay.com/photo/2017/09/01/00/15/png-2702691_1280.png
     @Unique
-    private boolean renderTextureAndCheckIfHovered(DrawContext context, MinecraftClient client,  Identifier texture, int x, int y, int width, int height, float maxWidth, float maxHeight, float heightBuffer, float opacity) {
+    private boolean renderTextureAndCheckIfHovered(DrawContext context, MinecraftClient client,  MediaElement mediaElement, int x, int y, int width, int height, float maxWidth, float maxHeight, float heightBuffer, float opacity) {
+        Identifier texture = mediaElement.currentFrame();
         boolean isTextureHovered = false;
         int corrected_width = 4 * width;       // IDK why the size needs to be multiplied by 4
         int corrected_height = 4 * height;
@@ -454,15 +458,15 @@ public abstract class ChatHudMixin {
         boolean isHovered = inverseMouseX >= 0 && inverseMouseX <= corrected_width &&
                 inverseMouseY >= limitedTopBorderHeight && inverseMouseY <= limitedBottomBorderHeight;
 
+        // run when image is hovered
+        int borderThickness = (int) (2 / finalScaleFactor);
         if ((MinecraftClient.getInstance().currentScreen instanceof ChatScreen && isHovered)) {
-            int borderThickness = (int) (2 / finalScaleFactor);
             // border highlight lines
             context.fill(0, limitedTopBorderHeight -borderThickness, -borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-left
             context.fill(corrected_width, limitedTopBorderHeight -borderThickness, corrected_width+borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-right
             context.fill(0, limitedTopBorderHeight, corrected_width, limitedTopBorderHeight -borderThickness, 0xFFFFFFFF); // x-top
             context.fill(0, limitedBottomBorderHeight, corrected_width, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // x-bottom
             isTextureHovered = true;
-
         }
         // ########################################################
 
@@ -473,9 +477,25 @@ public abstract class ChatHudMixin {
         // draw image
         if (CONFIG.debugOptions.renderImages()) {
             context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
+
+            // render favorite widget in the corner
+            if (isTextureHovered) {
+                float widgetScale = 2.2f;
+
+                int widgetLeftBorder = (int)(corrected_width-(FavoriteWidget.defaultSize*widgetScale));
+                int widgetBottomBorder = (int)(0+(FavoriteWidget.defaultSize*widgetScale));
+
+                boolean widgetHovered = inverseMouseX >= widgetLeftBorder && inverseMouseX <= corrected_width-borderThickness &&
+                        inverseMouseY >= limitedTopBorderHeight+borderThickness && inverseMouseY <= widgetBottomBorder;
+
+                if (widgetBottomBorder >= limitedTopBorderHeight) {
+                    FavoriteWidget.configure(mediaElement.source(), widgetLeftBorder, 0, widgetScale)
+                            .renderWidget(context, widgetHovered);
+                }
+            }
+            context.disableScissor();
         }
 
-        context.disableScissor();
 
         // Restore previous state
         RenderSystem.disableBlend();

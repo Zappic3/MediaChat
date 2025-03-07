@@ -4,6 +4,7 @@ import com.sksamuel.scrimage.nio.AnimatedGif;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedGif;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
 import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
+import com.zappic3.mediachat.ui.FavoriteWidget;
 import com.zappic3.mediachat.ui.MediaViewScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -448,7 +449,11 @@ public class MediaElement {
         MediaElement hovered = hovered();
         if (hovered != null) {
             if (button == 0 && action == 1) {
-                client.setScreen(new MediaViewScreen(hovered()));
+                if (FavoriteWidget.hovered()) {
+                    FavoriteWidget.resolveClick();
+                } else {
+                    client.setScreen(new MediaViewScreen(hovered()));
+                }
             } else if (button == 1 && action == 1) {
                 if (Screen.hasShiftDown()) {
                     Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + hovered.source() + CONFIG.endMediaUrl());

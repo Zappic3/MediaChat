@@ -378,7 +378,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + insertedUrl + CONFIG.endMediaUrl());
                 closeGifBrowser();
             }
-        });
+        }, bigGifUrl);
         component.margins(Insets.of(1));
         component.horizontalSizing(Sizing.expand());
         if (title != null && !title.isEmpty()) {

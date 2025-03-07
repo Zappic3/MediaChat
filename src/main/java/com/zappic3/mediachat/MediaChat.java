@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class MediaChat implements ModInitializer {
@@ -17,7 +18,7 @@ public class MediaChat implements ModInitializer {
 	public static final com.zappic3.mediachat.MediaChatConfig CONFIG = com.zappic3.mediachat.MediaChatConfig.createAndLoad();
 	public static final OwoNetChannel MEDIA_CHANNEL = OwoNetChannel.create(Identifier.of(MOD_ID, "media_sync"));
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	public static final CacheManager SERVER_CACHE = new CacheManager(Path.of("MediaChatTempFiles"), CONFIG.serverMaxCacheSize());
+	public static final SizeLimitedCache SERVER_CACHE = new SizeLimitedCache(MediaCache.getModRoot().resolve("MediaChatTempFiles"), CONFIG.serverMaxCacheSize());
 
 	@Override
 	public void onInitialize() {

@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.MediaChat.MEDIA_CHANNEL;
@@ -23,8 +25,18 @@ import static com.zappic3.mediachat.Utility.registerTexture;
 
 public class ClientNetworking {
     private final static Map<Integer, DataAssembler> _uncompleteDataAssemblers = new ConcurrentHashMap<>();
+    private final static Map<Integer, BiConsumer<ByteArrayInputStream, String>> _registeredReceiver = new ConcurrentHashMap<>();
 
     private ClientNetworking() {}
+
+    public static void registerReceiver(int packageId, BiConsumer<ByteArrayInputStream, String> receiver) {
+        if (_registeredReceiver.containsKey(packageId)) {
+            LOGGER.warn("Registering Packet Receiver Failed (An Receiver is already registered)");
+        } else {
+            _registeredReceiver.put(packageId, receiver);
+        }
+    }
+
 
     public static void registerPackets() {
         MEDIA_CHANNEL.registerClientbound(NetworkManager.ClientboundMediaSyncUploadResponsePacket.class, ((message, access) -> {
@@ -45,6 +57,12 @@ public class ClientNetworking {
 
                 if (assembler.isComplete()) {
                     try (ByteArrayInputStream bais = new ByteArrayInputStream(assembler.assemble())) {
+                        if (_registeredReceiver.containsKey(message.mediaId())) {
+                            _registeredReceiver.get(message.mediaId()).accept(bais, "image");
+                            return;
+                        }
+
+                        // default behavior if no receiver is registered
                         BufferedImage image = ImageIO.read(bais);
                         Utility.IdentifierAndSize ias = registerTexture(image, message.mediaId() + "_0");
                         MediaElement.update(message.mediaId(), ias.identifier(), image.getWidth(), image.getHeight(), ias.size());
@@ -67,6 +85,12 @@ public class ClientNetworking {
                 if (assembler.isComplete()) {
                     LOGGER.info("all chunks received");
                     try (ByteArrayInputStream bais = new ByteArrayInputStream(assembler.assemble())) {
+                        if (_registeredReceiver.containsKey(message.mediaId())) {
+                            _registeredReceiver.get(message.mediaId()).accept(bais, "gif");
+                            return;
+                        }
+
+                        // default behavior if no receiver is registered
                         GifSequenceReader reader = new GifSequenceReader();
                         int status = reader.read(bais);
                         if (status == 0) {
