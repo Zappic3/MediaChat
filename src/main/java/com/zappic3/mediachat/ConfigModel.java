@@ -4,6 +4,7 @@ import blue.endless.jankson.Comment;
 import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import io.wispforest.owo.config.Option;
 import io.wispforest.owo.config.annotation.*;
+import io.wispforest.owo.registration.annotations.AssignedName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,9 @@ public class ConfigModel {
     @Hook
     public List<String> whitelistedWebsites = new ArrayList<>(List.of("tenor.com")); // todo add constraints
 
+    @SectionHeader("gifBrowserOptions")
+    @Hook
+    public TenorSupportedLanguages tenorLanguage = TenorSupportedLanguages.MINECRAFT;
     public String tenorApiKey = "";
 
     @SectionHeader("debugOptions")
@@ -100,5 +104,65 @@ public class ConfigModel {
 
     public enum ServerMediaPermissionMode {
         OFF, WHITELIST, BLACKLIST
+    }
+
+    /**
+     * List of all languages supported by tenor.
+     * <a href="https://developers.google.com/tenor/guides/localization">https://developers.google.com/tenor/guides/localization</a>
+     */
+    public enum TenorSupportedLanguages {
+        MINECRAFT("Minecraft"),
+        ALBANIAN("sq"),
+        ARABIC("ar"),
+        BELARUSIAN("be"),
+        BENGALI("bn"),
+        BOSNIAN("bs"),
+        CANTONESE("zh_HK"),
+        CATALAN("ca"),
+        CHINESE_SIMPLIFIED("zh_CN"),
+        CHINESE_TRADITIONAL("zh_TW"),
+        CROATIAN("hr"),
+        CZECH("cd"),
+        DANISH("da"),
+        DUTCH("nl"),
+        ENGLISH("en"),
+        FARSI("fa"),
+        FILIPINO("fil"), // Tenor Search isn't supported
+        FINNISH("fi"),
+        FRENCH("fr"),
+        GERMAN("de"),
+        GREEK("el"),
+        HEBREW("he"),
+        Hindi("hi"),
+        HUNGARIAN("hu"),
+        INDONESIAN("id"),
+        ITALIAN("it"),
+        JAPANESE("ja"),
+        KOREAN("ko"),
+        LAOS("lo"),
+        MALAY("ms"),
+        MONGOLIAN("mn"),
+        NORWEGIAN_BOKMAL("no"),
+        //NORWEGIAN_NYNORSK("nn"), // category translation isn't supported
+        POLISH("pl"),
+        PORTUGUESE("pt"),
+        ROMANIAN("ro"),
+        RUSSIAN("ru"),
+        SERBIAN("sr"),
+        SLOVAK("sk"),
+        SPANISH("es"),
+        SWEDISH("sv"),
+        //TAGALOG("tl"), // category translation isn't supported
+        THAI("th"),
+        TURKISH("tr"),
+        UKRAINIAN("uk"),
+        URDU("ur"),
+        VIETNAMESE("vi");
+
+        public final String lang_code;
+
+        private TenorSupportedLanguages(String lang) {
+            this.lang_code = lang;
+        }
     }
 }

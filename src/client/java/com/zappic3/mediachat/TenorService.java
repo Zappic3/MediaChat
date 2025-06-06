@@ -20,9 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.zappic3.mediachat.MediaChat.CONFIG;
 import static com.zappic3.mediachat.MediaChat.LOGGER;
 
-// todo add a confic option to set the locale / use player language setting
 public class TenorService {
-    private final static String _clientKey = MinecraftClient.getInstance().player.getUuidAsString();
     private static CategoryResponse _cachedCategoryResponse = null;
     private static long _cachedCategoryResponseMaxAge = 0;
 
@@ -36,8 +34,8 @@ public class TenorService {
         return CompletableFuture.supplyAsync(() -> {
             try (HttpClient client = HttpClient.newHttpClient()) {
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("https://tenor.googleapis.com/v2/categories?key=%s&client_key=%s&locale=%s"
-                                .formatted(CONFIG.tenorApiKey(), _clientKey, MinecraftClient.getInstance().options.language)))
+                        .uri(URI.create("https://tenor.googleapis.com/v2/categories?key=%s&locale=%s"
+                                .formatted(CONFIG.tenorApiKey(), getTenorLanguage())))
                         .timeout(Duration.ofSeconds(3))
                         .GET()
                         .build();
@@ -96,8 +94,8 @@ public class TenorService {
         return CompletableFuture.supplyAsync(() -> {
             try (HttpClient client = HttpClient.newHttpClient()) {
                 HttpRequest request = HttpRequest.newBuilder() // todo use smaller gifs so the loading time is shorter
-                        .uri(URI.create(("https://tenor.googleapis.com/v2/search?key=%s&client_key=%s&locale=%s&q=%s&media_filter=mediumgif,tinygif&limit=%d"+posArg)
-                                .formatted(CONFIG.tenorApiKey(), _clientKey, MinecraftClient.getInstance().options.language, cleanedQuery, result_count)))
+                        .uri(URI.create(("https://tenor.googleapis.com/v2/search?key=%s&locale=%s&q=%s&media_filter=mediumgif,tinygif&limit=%d"+posArg)
+                                .formatted(CONFIG.tenorApiKey(), getTenorLanguage(), cleanedQuery, result_count)))
                         .GET()
                         .timeout(Duration.ofSeconds(3))
                         .build();
@@ -134,8 +132,8 @@ public class TenorService {
     public static void registerShare(String id) {
         try (HttpClient client = HttpClient.newHttpClient()) {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://tenor.googleapis.com/v2/registershare?key=%s&id=%s&client_key=%s&locale=%s"
-                            .formatted(CONFIG.tenorApiKey(), id, _clientKey, MinecraftClient.getInstance().options.language)))
+                    .uri(URI.create("https://tenor.googleapis.com/v2/registershare?key=%s&id=%s&locale=%s"
+                            .formatted(CONFIG.tenorApiKey(), id, getTenorLanguage())))
                     .GET()
                     .build();
             client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -173,6 +171,28 @@ public class TenorService {
             return connectionStatus == TenorService.connectionStatus.CONNECTED;
         }
 
+    }
+
+    /**
+     * setups an observer that clears cached data
+     * when the Tenor language changes to avoid
+     * showing outdated content
+     */
+    public static void registerTenorLangObserver() {
+        CONFIG.subscribeToTenorLanguage((lang) -> {
+            _cachedCategoryResponse = null;
+        });
+    }
+
+    /**
+     * Returns the Tenor language code to use, based on the tenorLanguage config option.
+     * @return a language code as String
+     */
+    public static String getTenorLanguage() {
+        if (CONFIG.tenorLanguage() == ConfigModel.TenorSupportedLanguages.MINECRAFT) {
+            return MinecraftClient.getInstance().options.language;
+        }
+        return CONFIG.tenorLanguage().lang_code;
     }
 
     public enum connectionStatus {

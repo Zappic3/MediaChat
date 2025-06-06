@@ -8,13 +8,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.ActionResult;
 
-import java.nio.file.Path;
 import java.time.Duration;
 
 
 import static com.zappic3.mediachat.ConfigControls.registerConfigObserver;
 import static com.zappic3.mediachat.MediaChat.*;
 import static com.zappic3.mediachat.ui.GifBrowserUI.addGifUIToChatScreen;
+import static com.zappic3.mediachat.TenorService.registerTenorLangObserver;
 
 
 public class MediaChatClient implements ClientModInitializer {
@@ -27,8 +27,10 @@ public class MediaChatClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			registerConfigObserver();
 			addGifUIToChatScreen();
+			registerTenorLangObserver();
 			DownloadedMedia.setTranslationProvider(new ClientTranslationProvider());
 			ClientCommands.registerClientCommands();
+
 
 			MouseClickCallback.EVENT.register((window, button, action, mods) -> {
 				MediaElement.reactToMouseClick(button, action);
@@ -41,7 +43,6 @@ public class MediaChatClient implements ClientModInitializer {
 
 		// register networking stuff
 		ClientNetworking.registerPackets();
-
 	}
 
 	private void onClientTick(MinecraftClient client) {
