@@ -4,7 +4,6 @@ import blue.endless.jankson.Comment;
 import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import io.wispforest.owo.config.Option;
 import io.wispforest.owo.config.annotation.*;
-import io.wispforest.owo.registration.annotations.AssignedName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -111,7 +110,7 @@ public class ConfigModel {
      * <a href="https://developers.google.com/tenor/guides/localization">https://developers.google.com/tenor/guides/localization</a>
      */
     public enum TenorSupportedLanguages {
-        MINECRAFT("Minecraft"),
+        MINECRAFT("minecraft"),
         ALBANIAN("sq"),
         ARABIC("ar"),
         BELARUSIAN("be"),
@@ -133,7 +132,7 @@ public class ConfigModel {
         GERMAN("de"),
         GREEK("el"),
         HEBREW("he"),
-        Hindi("hi"),
+        HINDI("hi"),
         HUNGARIAN("hu"),
         INDONESIAN("id"),
         ITALIAN("it"),
@@ -161,7 +160,7 @@ public class ConfigModel {
 
         public final String lang_code;
 
-        private TenorSupportedLanguages(String lang) {
+        TenorSupportedLanguages(String lang) {
             this.lang_code = lang;
         }
     }
