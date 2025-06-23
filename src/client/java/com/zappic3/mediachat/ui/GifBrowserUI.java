@@ -19,13 +19,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.zappic3.mediachat.MediaChat.*;
 
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
-    private static final Identifier NO_INTERNET =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
-    private static final Identifier INVALID_API_KEY =  Identifier.of(MOD_ID, "textures/media_too_big.png");
+    private static final Identifier NO_INTERNET_TEXTURE =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
+    private static final Identifier INVALID_API_KEY_TEXTURE =  Identifier.of(MOD_ID, "textures/gif_browser_invalid_api_key.png");
 
     private static final Text searchBarDefaultText = Text.translatable("text.mediachat.gifBrowser.searchbarPlaceholder");
     private boolean searchbarIsDefault;
@@ -300,21 +301,30 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     }
 
+
+    /**
+     * Replaces the GIF-Browser content with an error message
+     *
+     * @param connection The error that should be communicated to the user
+     */
     private void displayError(TenorService.connectionStatus connection) {
         _searchEnabled = false;
         Text rawMsg;
-        Identifier errorImageIdentifier;
+        Identifier errorImageIdentifier = switch (connection) {
+            case INVALID_API_KEY -> {
+                rawMsg = Text.translatable("text.mediachat.gifBrowser.apiKeyError");
+                yield INVALID_API_KEY_TEXTURE;
+            }
+            case NO_INTERNET -> {
+                rawMsg = Text.translatable("text.mediachat.gifBrowser.connectionError");
+                yield NO_INTERNET_TEXTURE;
+            }
+            default -> {
+                rawMsg = Text.of("??? - If you're seeing this, you found a new and exiting bug!");
+                yield NO_INTERNET_TEXTURE;
+            }
+        };
 
-        if (connection.equals(TenorService.connectionStatus.INVALID_API_KEY)) {
-            rawMsg = Text.translatable("text.mediachat.gifBrowser.apiKeyError");
-            errorImageIdentifier = INVALID_API_KEY;
-        } else if (connection.equals(TenorService.connectionStatus.NO_INTERNET)) {
-            rawMsg = Text.translatable("text.mediachat.gifBrowser.connectionError");
-            errorImageIdentifier = NO_INTERNET;
-        } else {
-            rawMsg = Text.of("??? - If you're seeing this, you found a new and exiting bug!");
-            errorImageIdentifier = NO_INTERNET;
-        }
 
         FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
         layout.surface(Surface.VANILLA_TRANSLUCENT)
@@ -324,18 +334,29 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         _root.child(layout);
 
         int textMargin = 5;
-        TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 512, 512);
+        // Calculate the error image size based on the current screen height.
+        // This is done because just using "Sizing.fill(15)"
+        // depends on screen height and width (for the respective axis)
+        // and thus deforming the error image so that it is no longer a prefect square
+        float screenHeight = Optional.ofNullable(MinecraftClient.getInstance())
+                .map(client -> client.currentScreen)
+                .map(screen -> screen.height)
+                .orElse(50); // default value (is probably never used)
+        int errorImageSize = (int) ((screenHeight/100)*15);
+
+        TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 256, 256);
         errorImage.positioning(Positioning.relative(50, 0)).margins(Insets.of(textMargin));
+        errorImage.sizing(Sizing.fixed(errorImageSize));
         layout.child(errorImage);
 
         LabelComponent label = Components.label(rawMsg);
         label.maxWidth(layout.width()-(textMargin*2))
                 .horizontalTextAlignment(HorizontalAlignment.CENTER)
-                .positioning(Positioning.relative(50, 25))
+                .positioning(Positioning.relative(50, 40))
                 .margins(Insets.of(textMargin));
 
         ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {});
-        reloadButton.positioning(Positioning.relative(50, 70));
+        reloadButton.positioning(Positioning.relative(50, 80));
 
         layout.child(label);
         layout.child(reloadButton);
