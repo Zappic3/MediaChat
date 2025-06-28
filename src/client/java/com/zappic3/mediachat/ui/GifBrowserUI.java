@@ -15,6 +15,7 @@ import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
+import net.minecraft.util.math.ColorHelper;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -27,11 +28,15 @@ import static com.zappic3.mediachat.MediaChat.*;
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     private static final Identifier NO_INTERNET_TEXTURE =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
     private static final Identifier INVALID_API_KEY_TEXTURE =  Identifier.of(MOD_ID, "textures/gif_browser_invalid_api_key.png");
-
     private static final Text searchBarDefaultText = Text.translatable("text.mediachat.gifBrowser.searchbarPlaceholder");
+
+    private final ArrayList<FlowLayout> browserViews = new ArrayList<>();
+    private final ArrayList<String> browserViewTranslationKeys = new ArrayList<>();
+
     private boolean searchbarIsDefault;
     private static GifBrowserUI _currentInstance;
     private FlowLayout _root;
+    private final FlowLayout _browserParent;
     private final FlowLayout _gifBrowser;
     private final ButtonComponent _gifButton;
     private final LoadingLabelComponent _loadingLabel;
@@ -51,9 +56,13 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         _currentInstance = this;
         _gifBrowserOpen = false;
         _gifBrowser = buildGifBrowser();
+        this.addViewToBrowser(_gifBrowser, "Test");
+        this.addViewToBrowser(_gifBrowser, "Test2");
         _gifButton = buildGifButton();
         _loadingLabel = buildLoadingLabel();
+        _browserParent = buildBrowserParent();
         _searchEnabled = true;
+
     }
 
     public static GifBrowserUI getInstance() {
@@ -62,6 +71,11 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     public static void addGifUIToChatScreen() {
         Layers.add(Containers::verticalFlow, instance -> new GifBrowserUI().build(instance.adapter.rootComponent), ChatScreen.class);
+    }
+
+    public void addViewToBrowser(FlowLayout view, String titleTranslationKey) {
+        this.browserViews.add(view);
+        this.browserViewTranslationKeys.add(titleTranslationKey);
     }
 
     @Override
@@ -86,8 +100,72 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         return label;
     }
 
-    private FlowLayout buildGifBrowser() {
+    private FlowLayout buildBrowserParent() {
         FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
+        FlowLayout buttonRow = Containers.horizontalFlow(Sizing.fill(), Sizing.fill(10));
+        buttonRow.id("browser-parent-button-row");
+        FlowLayout contentArea = Containers.verticalFlow(Sizing.expand(), Sizing.expand());
+        contentArea.id("browser-parent-content-area");
+
+        for (int i= 0; i < this.browserViewTranslationKeys.size(); i++) {
+            String key = this.browserViewTranslationKeys.get(i);
+
+            int finalI = i;
+            ButtonComponent button = Components.button(Text.translatable(key), (k) -> showBrowserView(finalI));
+            button.id(Integer.toString(finalI));
+
+            int buttonWidth = (100 / this.browserViewTranslationKeys.size());
+            button.sizing(Sizing.fill(buttonWidth), Sizing.fill());
+
+            button.renderer(ButtonComponent.Renderer.flat(
+                    ColorHelper.Argb.getArgb(150, 60, 60, 60),
+                    ColorHelper.Argb.getArgb(150, 69, 69, 69),
+                    ColorHelper.Argb.getArgb(150, 37, 37, 37))
+            );
+            buttonRow.child(button);
+            LOGGER.warn(key);
+        }
+
+        layout.surface(Surface.VANILLA_TRANSLUCENT)
+                .positioning(Positioning.relative(100, 100))
+                .margins(Insets.of(0,15, 0, 2))
+                .id("browser-parent-background");
+
+        layout.child(buttonRow);
+        layout.child(contentArea);
+
+        return layout;
+    }
+
+    private void showBrowserView(int viewId) {
+        FlowLayout contentArea = this._browserParent.childById(FlowLayout.class, "browser-parent-content-area");
+        contentArea.clearChildren(); // remove old content
+
+        // add new content
+        FlowLayout content = this.browserViews.get(viewId);
+        contentArea.child(content);
+
+
+        //update buttons
+        FlowLayout buttonRow = this._browserParent.childById(FlowLayout.class, "browser-parent-button-row");
+        List<Component> buttons = buttonRow.children();
+
+        for (Component button : buttons) {
+            ButtonComponent btn = (ButtonComponent) button;
+
+            int btn_id;
+            try {
+                btn_id = Integer.parseInt(btn.id());
+            } catch (NumberFormatException | NullPointerException e) {
+                btn_id = -1;
+            }
+            btn.active(viewId != btn_id);
+
+        }
+    }
+
+    private FlowLayout buildGifBrowser() {
+        FlowLayout layout = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
         TextBoxComponent searchbar = Components.textBox(Sizing.fill()).text(getSearchBarDefaultString());
         searchbar.id("searchbar");
         searchbar.onChanged().subscribe((newText) -> {
@@ -116,21 +194,23 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                         ).sizing(Sizing.content(), Sizing.content()).id("gif-container-container")
                 )
         )
-        .surface(Surface.VANILLA_TRANSLUCENT)
-        .positioning(Positioning.relative(100, 100))
-        .margins(Insets.of(0,15, 0, 2))
+        .margins(Insets.of(0,0, 0, 0))
         .id("browser-background");
 
         return layout;
     }
 
     private ButtonComponent buildGifButton() {
-        ButtonComponent button = new UnfocusableButton(Text.of("Browse Gifs"), buttonComponent -> {
+        ButtonComponent button = new UnfocusableButton(Text.of("Browse Gifs"), buttonComponent -> { // todo use translation key
             openGifBrowser();
         });
         button.positioning(Positioning.relative(100, 100))
                 .margins(Insets.bottom(14));
-        button.renderer(ButtonComponent.Renderer.flat(0x606060, 0x303030, 0x111111));
+        button.renderer(ButtonComponent.Renderer.flat(
+                ColorHelper.Argb.getArgb(0, 0, 0, 0),
+                ColorHelper.Argb.getArgb(50, 255, 255, 255),
+                ColorHelper.Argb.getArgb(0, 0, 0, 0))
+        );
 
         return button;
     }
@@ -152,7 +232,8 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     public void openGifBrowser() {
         _root.clearChildren();
-        _root.child(_gifBrowser);
+        _root.child(_browserParent);
+        this.showBrowserView(0);
         _gifBrowserOpen = true;
         showGifCategories(TenorService.getFeatured(), true);
     }
@@ -177,7 +258,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
             clearGifWidgets();
 
             PreviewGifContainer preview = new PreviewGifContainer(0);
-            FlowLayout column = _root.childById(FlowLayout.class, "gif-container-left");
+            FlowLayout column = _gifBrowser.childById(FlowLayout.class, "gif-container-left");
 
             if (queryResponse.isConnected()) {
                 Iterator<TenorService.Category> categories = queryResponse.getResponseValue();
@@ -355,7 +436,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 .positioning(Positioning.relative(50, 40))
                 .margins(Insets.of(textMargin));
 
-        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {});
+        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {}); //todo add translation key and add function to button
         reloadButton.positioning(Positioning.relative(50, 80));
 
         layout.child(label);
