@@ -1,5 +1,6 @@
 package com.zappic3.mediachat.ui;
 
+import com.zappic3.mediachat.FavoritesManager;
 import com.zappic3.mediachat.TenorService;
 import com.zappic3.mediachat.Utility;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
@@ -17,6 +18,7 @@ import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import net.minecraft.util.math.ColorHelper;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -38,6 +40,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     private FlowLayout _root;
     private final FlowLayout _browserParent;
     private final FlowLayout _gifBrowser;
+    private final FlowLayout _favoritesBrowser;
     private final ButtonComponent _gifButton;
     private final LoadingLabelComponent _loadingLabel;
     private boolean _gifBrowserOpen;
@@ -56,12 +59,14 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         _currentInstance = this;
         _gifBrowserOpen = false;
         _gifBrowser = buildGifBrowser();
-        this.addViewToBrowser(_gifBrowser, "Test");
-        this.addViewToBrowser(_gifBrowser, "Test2");
+        _favoritesBrowser = buildFavoritesBrowser();
         _gifButton = buildGifButton();
         _loadingLabel = buildLoadingLabel();
-        _browserParent = buildBrowserParent();
         _searchEnabled = true;
+
+        this.addViewToBrowser(_gifBrowser, "Search"); // todo use actual translation keys
+        this.addViewToBrowser(_favoritesBrowser, "Favorites");
+        _browserParent = buildBrowserParent();
 
     }
 
@@ -145,7 +150,6 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         FlowLayout content = this.browserViews.get(viewId);
         contentArea.child(content);
 
-
         //update buttons
         FlowLayout buttonRow = this._browserParent.childById(FlowLayout.class, "browser-parent-button-row");
         List<Component> buttons = buttonRow.children();
@@ -200,6 +204,23 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         return layout;
     }
 
+    private FlowLayout buildFavoritesBrowser() {
+        FlowLayout layout = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
+        layout.child(
+            Containers.verticalScroll(Sizing.fill(), Sizing.expand(),
+                Containers.verticalFlow(Sizing.content(), Sizing.content()).child(
+                    Containers.horizontalFlow(Sizing.fill(), Sizing.content())
+                        .child(Containers.verticalFlow(Sizing.expand(50), Sizing.content()).id("favorites-container-left"))
+                        .child(Containers.verticalFlow(Sizing.expand(50), Sizing.content()).id("favorites-container-right"))
+                ).sizing(Sizing.content(), Sizing.content()).id("favorites-container-container")
+            )
+        )
+        .margins(Insets.of(0,0, 0, 0))
+        .id("favorites-browser-background");
+
+        return layout;
+    }
+
     private ButtonComponent buildGifButton() {
         ButtonComponent button = new UnfocusableButton(Text.of("Browse Gifs"), buttonComponent -> { // todo use translation key
             openGifBrowser();
@@ -236,6 +257,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         this.showBrowserView(0);
         _gifBrowserOpen = true;
         showGifCategories(TenorService.getFeatured(), true);
+
     }
 
     public void closeGifBrowser() {
@@ -329,6 +351,23 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 _rightColumnHeight += addedHeight;
             }
         }
+
+        public void addGifWidget(int hashcode, List<Integer> dims, String gifTitle) {
+            if (gifTitle == null) {gifTitle = "";}
+            PressableGifComponent gifComponent = createGifWidget(hashcode, gifTitle);
+            int addedHeight = ((dims.get(1) * _columnWidth) / dims.get(0));
+            gifComponent.verticalSizing(Sizing.fixed(addedHeight));
+
+            if (_leftColumnHeight <= _rightColumnHeight) {
+                _leftGifs.add(gifComponent);
+
+                _leftColumnHeight += addedHeight;
+            } else {
+                _rightGifs.add(gifComponent);
+                _rightColumnHeight += addedHeight;
+            }
+        }
+
         public void setColumnWidth(int columnWidth) {
             _columnWidth = columnWidth;
         }
@@ -379,9 +418,38 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 displayError(queryResponse.getConnectionStatus());
             }
         });
-
     }
 
+
+    private void showFavorites() {
+        // clear old gifs
+        //_root.childById(FlowLayout.class, "favorites-container-left").clearChildren();
+        //_root.childById(FlowLayout.class, "favorites-container-right").clearChildren();
+
+        FavoritesManager favoritesManager = FavoritesManager.getInstance();
+        FlowLayout column = _gifBrowser.childById(FlowLayout.class, "favorites-container-left");
+        PreviewGifContainer preview = new PreviewGifContainer(0);
+        int columnWidth = column != null ? column.width() : 50;
+        preview.setColumnWidth(columnWidth);
+        List<Path> favorites = favoritesManager.getFavoritesList();
+
+        for (Path path : favorites) {
+            String fileNameWithExtension = path.getFileName().toString();
+            int dotIndex = fileNameWithExtension.lastIndexOf('.');
+            String baseName = (dotIndex == -1)
+                    ? fileNameWithExtension
+                    : fileNameWithExtension.substring(0, dotIndex);
+            int hashcode = Integer.parseInt(baseName); // lese den hashcode im dateinamen aus
+
+            List<Integer> dims = new ArrayList<>();
+            dims.add(50);
+            dims.add(50);
+            preview.addGifWidget(hashcode, dims, null);
+        }
+
+        _root.childById(FlowLayout.class, "favorites-container-left").children(preview.getLeftGifs());
+        _root.childById(FlowLayout.class, "favorites-container-right").children(preview.getRightGifs());
+    }
 
     /**
      * Replaces the GIF-Browser content with an error message
@@ -407,18 +475,17 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         };
 
 
-        FlowLayout layout = Containers.verticalFlow(Sizing.fill(30), Sizing.fill(70));
-        layout.surface(Surface.VANILLA_TRANSLUCENT)
-                .positioning(Positioning.relative(100, 100));
+        FlowLayout layout = Containers.verticalFlow(Sizing.fill(), Sizing.fill());
+        layout.positioning(Positioning.relative(100, 100));
 
-        _root.clearChildren();
-        _root.child(layout);
+        _gifBrowser.clearChildren();
+        _gifBrowser.child(layout);
 
         int textMargin = 5;
         // Calculate the error image size based on the current screen height.
         // This is done because just using "Sizing.fill(15)"
         // depends on screen height and width (for the respective axis)
-        // and thus deforming the error image so that it is no longer a prefect square
+        // and thus deforms the error image so that it is no longer a prefect square
         float screenHeight = Optional.ofNullable(MinecraftClient.getInstance())
                 .map(client -> client.currentScreen)
                 .map(screen -> screen.height)
@@ -426,18 +493,17 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         int errorImageSize = (int) ((screenHeight/100)*15);
 
         TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 256, 256);
-        errorImage.positioning(Positioning.relative(50, 0)).margins(Insets.of(textMargin));
+        errorImage.margins(Insets.of(textMargin));
         errorImage.sizing(Sizing.fixed(errorImageSize));
         layout.child(errorImage);
 
         LabelComponent label = Components.label(rawMsg);
         label.maxWidth(layout.width()-(textMargin*2))
                 .horizontalTextAlignment(HorizontalAlignment.CENTER)
-                .positioning(Positioning.relative(50, 40))
                 .margins(Insets.of(textMargin));
 
         ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {}); //todo add translation key and add function to button
-        reloadButton.positioning(Positioning.relative(50, 80));
+        reloadButton.margins(Insets.of(textMargin));
 
         layout.child(label);
         layout.child(reloadButton);
@@ -481,6 +547,27 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 closeGifBrowser();
             }
         }, bigGifUrl);
+        component.margins(Insets.of(1));
+        component.horizontalSizing(Sizing.expand());
+        if (title != null && !title.isEmpty()) {
+            component.setMessage(Text.literal(title).formatted(Formatting.BOLD));
+            component.setAutoHeight(false);
+        }
+
+        return component;
+    }
+
+    private PressableGifComponent createGifWidget(int hashcode, String title) {
+        PressableGifComponent component = new PressableGifComponent(hashcode, (gifComponent) -> {
+            if (title != null && !title.isEmpty()) {
+                // todo add functionality for opening folders
+            } else {
+
+                // todo: upload gif so it can be shared
+                Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + "todo: upload gif so it can be shared" + CONFIG.endMediaUrl());
+                closeGifBrowser();
+            }
+        });
         component.margins(Insets.of(1));
         component.horizontalSizing(Sizing.expand());
         if (title != null && !title.isEmpty()) {

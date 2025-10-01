@@ -23,6 +23,7 @@ public final class FavoriteWidget extends ButtonWidget {
 
     private static FavoriteWidget INSTANCE = null;
     private static String currentElementUrl = null;
+    private static Integer currentElementHash = null;
     private static boolean currentElementIsFavorite = false;
 
     private FavoriteWidget(String elementUrl, int x, int y, float scale, NarrationSupplier narrationSupplier) {
@@ -35,11 +36,44 @@ public final class FavoriteWidget extends ButtonWidget {
         INSTANCE = this;
     }
 
+    private FavoriteWidget(int elementHash, int x, int y, float scale, NarrationSupplier narrationSupplier) {
+        super(x, y, defaultSize, defaultSize, Text.empty(), (t) -> {LOGGER.info("Favorited!!");}, narrationSupplier);
+
+        FavoriteWidget.scale = scale;
+        currentElementUrl = null;
+        currentElementIsFavorite = true; // this was already checked previously
+        currentElementHash = elementHash;
+
+        INSTANCE = this;
+    }
+
     public static FavoriteWidget configure(String elementUrl, int x, int y, float scale) {
         if (INSTANCE == null) {
             return new FavoriteWidget(elementUrl, x, y, scale, null);
         } else {
             return INSTANCE.update(elementUrl, x, y, scale);
+        }
+    }
+
+    /**
+     * Initalises the FavriteWidget. Expects the elementHash to belong to an Element
+     * in the FAVORITE_CACHE
+     * @param elementHash
+     * @param x
+     * @param y
+     * @param scale
+     * @return
+     */
+    public static FavoriteWidget configure(int elementHash, int x, int y, float scale) {
+        if (FavoritesManager.getInstance().isFavorite(elementHash)) {
+            if (INSTANCE == null) {
+                return new FavoriteWidget(elementHash, x, y, scale, null);
+            } else {
+                return INSTANCE.update(elementHash, x, y, scale);
+            }
+        } else {
+            LOGGER.error("When Configuring FavoriteWidget, received hashcode of not favorited element");
+            return null;
         }
     }
 
@@ -51,6 +85,18 @@ public final class FavoriteWidget extends ButtonWidget {
         if (!Objects.equals(elementUrl, currentElementUrl)) {
             currentElementUrl = elementUrl;
            currentElementIsFavorite = FavoritesManager.getInstance().isFavorite(elementUrl.hashCode());
+        }
+        return this;
+    }
+
+    private FavoriteWidget update(int elementHash, int x, int y, float scale) {
+        this.setX(x);
+        this.setY(y);
+        FavoriteWidget.scale = scale;
+
+        if (!Objects.equals(elementHash, currentElementHash)) {
+            currentElementHash = elementHash;
+            currentElementIsFavorite = true; // this should always be true
         }
         return this;
     }

@@ -42,8 +42,16 @@ public class FavoritesManager {
         return instance;
     }
 
+    public List<Path> getFavoritesList() {
+        return _favoritesList;
+    }
+
     public boolean isFavorite(int hash) {
         return FAVORITE_CACHE.isFileInCache(hash);
+    }
+
+    public OneOfTwo<BufferedImage, AnimatedGif> loadFavoriteFromCache(int hash) {
+        return FAVORITE_CACHE.loadFileFromCache(hash);
     }
 
     private void removeFavorite(int hash) {

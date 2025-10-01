@@ -41,6 +41,7 @@ public class MediaElement {
 
     private static final Map<Integer, MediaElement> _mediaPool = new ConcurrentHashMap<>();
     private static MediaElement _hoveredMediaElement = null;
+    private static final FavoritesManager _favoritesManager = FavoritesManager.getInstance();
 
 
     private  CompletableFuture<Void> loadFuture ;
@@ -120,6 +121,34 @@ public class MediaElement {
         }
     }
 
+    private MediaElement(int hashcode, List<Identifier> ids, Importance importance, long sizeInBit) {
+        this._source = null;
+        this._identifier = ids;
+        this._elementId = UUID.randomUUID();
+        this._errorMessage = null;
+        this._lastTimeUsed = System.currentTimeMillis();
+        this._importance = importance;
+        this._sizeInBit = sizeInBit;
+
+        this.setIdentifier(MEDIA_LOADING, 64, 64, -1);
+        this.loadFuture = CompletableFuture.runAsync(() -> {
+            try {
+                MediaIdentifierInfo mii = loadMediaFromCache(hashcode);
+                this.setIdentifier(mii.id(), mii.delays(), mii.width(), mii.height(), mii.sizeInBit());
+                if (mii.delays != null) {
+                    this.isAnimPlaying = true;
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to load media from cache", e);
+                this.setErrorMessage("Failed to load media from cache");
+            }
+        }).exceptionally(ex -> {
+            LOGGER.error("Error in async loading task: {}", ex.getMessage());
+            this.setErrorMessage("Error in async loading task: " + ex.getMessage());
+            return null;
+        });
+    }
+
     public record MediaIdentifierInfo(List<Identifier> id, List<Long> delays, int width, int height, long sizeInBit) {
         public MediaIdentifierInfo(Identifier id, int width, int height, long sizeInBit) {
             this(List.of(id), null, width, height, sizeInBit);
@@ -141,6 +170,18 @@ public class MediaElement {
 
     public static MediaElement of(String source) {
         return of(source, true, Importance.NORMAL);
+    }
+
+    public static MediaElement ofCached(int hashcode, Importance importance) {
+        MediaElement element = _mediaPool.computeIfAbsent(hashcode, s -> {
+            // the actual identifier list will be loaded later
+            return new MediaElement(hashcode, new ArrayList<>(), importance, -1);
+        });
+        element._lastTimeUsed = System.currentTimeMillis();
+        if (element._source == null) {
+            element._source = String.valueOf(hashcode);
+        }
+        return element;
     }
 
     /**
@@ -177,36 +218,54 @@ public class MediaElement {
         }
     }
 
+
+
+    private static MediaIdentifierInfo loadMediaFromCache(int hashcode) {
+        try {
+            OneOfTwo<BufferedImage, AnimatedGif> result = null;
+
+            if (CLIENT_CACHE.isFileInCache(hashcode)) {
+                result = CLIENT_CACHE.loadFileFromCache(hashcode);
+            } else if (_favoritesManager.isFavorite(hashcode)) {
+                result = _favoritesManager.loadFavoriteFromCache(hashcode);
+            }
+
+            if (result != null) {
+                if (result.getFirst() != null) {
+                    Utility.IdentifierAndSize ias = registerTexture(result.getFirst(), hashcode + "_" + 0);
+                    return new MediaIdentifierInfo(ias.identifier(), result.getFirst().getWidth(), result.getFirst().getHeight(), calculateTextureMemoryUsage(result.getFirst()));
+
+                } else if (result.getSecond() != null) {
+                    AnimatedGif gif = result.getSecond();
+                    List<Long> delays = new ArrayList<>();
+                    List<Identifier> identifiers = new ArrayList<>();
+                    long totalSize = 0;
+                    Utility.IdentifierAndSize ias;
+                    for (int i = 0; i < gif.getFrameCount(); i++) {
+                        ImmutableImage currentFrame = gif.getFrame(i);
+                        BufferedImage image = currentFrame.toNewBufferedImage(currentFrame.getType());
+                        ias = registerTexture(image, hashcode + "_" + i);
+                        identifiers.add(ias.identifier());
+                        totalSize += ias.size();
+                        delays.add(gif.getDelay(i).toMillis());
+                    }
+                    return new MediaIdentifierInfo(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height, totalSize);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error while registering cached image: \n" + e.getMessage());
+        }
+        return null;
+    }
+
     // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private MediaIdentifierInfo downloadMedia(String source, boolean saveToCache) {
         DownloadedMedia downloadedMedia;
 
         try {
-            if (CLIENT_CACHE.isFileInCache(source.hashCode())) {
-                OneOfTwo<BufferedImage, AnimatedGif> result =  CLIENT_CACHE.loadFileFromCache(source.hashCode());
-                if (result != null) {
-                    if (result.getFirst() != null) {
-                        Utility.IdentifierAndSize ias = registerTexture(result.getFirst(), source.hashCode()+"_"+0);
-                        return new MediaIdentifierInfo(ias.identifier(), result.getFirst().getWidth(), result.getFirst().getHeight(), calculateTextureMemoryUsage(result.getFirst()));
-
-                    } else if (result.getSecond() != null) {
-                        AnimatedGif gif = result.getSecond();
-                        List<Long> delays = new ArrayList<>();
-                        List<Identifier> identifiers = new ArrayList<>();
-                        long totalSize = 0;
-                        Utility.IdentifierAndSize ias;
-                        for (int i = 0; i < gif.getFrameCount(); i++) {
-                            ImmutableImage currentFrame = gif.getFrame(i);
-                            BufferedImage image = currentFrame.toNewBufferedImage(currentFrame.getType());
-                            ias = registerTexture(image, source.hashCode()+"_"+i);
-                            identifiers.add(ias.identifier());
-                            totalSize += ias.size();
-                            delays.add(gif.getDelay(i).toMillis());
-                        }
-                        return new MediaIdentifierInfo(identifiers, delays, gif.getFrame(0).width, gif.getFrame(0).height, totalSize);
-                    }
-                }
-            }
+            // if media is already downloaded, return that instead
+            MediaIdentifierInfo info = loadMediaFromCache(source.hashCode());
+            if (info != null) {return info;}
 
             // check if the downloading should be handled server-side
             if ((!MinecraftClient.getInstance().isInSingleplayer()

@@ -19,7 +19,9 @@ public class PressableGifComponent extends ButtonWidget {
     protected boolean textShadow = true;
     private boolean autoHeight = true;
     private final String _sourceURL;
+    private int _sourceHash;
     private final String _favoriteUrl;
+    private boolean _usesFavoritedImage = false;
 
     public PressableGifComponent(String sourceUrl, Consumer<PressableGifComponent> onPress, String favoriteUrl) {
         super(0, 0, 0, 0, Text.empty(), button -> {
@@ -37,9 +39,25 @@ public class PressableGifComponent extends ButtonWidget {
         this(sourceURL, onPress, sourceURL);
     }
 
+    /**
+      This methode supposed to be used for elements that are currently favorited,
+      because their URL is not known
+     */
+    public PressableGifComponent(int hashcode, Consumer<PressableGifComponent> onPress) {
+        this(hashcode+"", onPress, null);
+        _usesFavoritedImage = true;
+        _sourceHash = hashcode;
+    }
+
     @Override
     public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-        MediaElement gif = MediaElement.of(_sourceURL, false, MediaElement.Importance.LOW);
+        MediaElement gif;
+        if (_usesFavoritedImage) {
+            gif = MediaElement.ofCached(_sourceHash, MediaElement.Importance.LOW);
+        } else {
+            gif = MediaElement.of(_sourceURL, false, MediaElement.Importance.LOW);
+        }
+
         try {
             calcAutoHeight(gif, this.width);
             int renderV = 0;
@@ -55,10 +73,20 @@ public class PressableGifComponent extends ButtonWidget {
             if (!this.getMessage().equals(Text.empty()) || hovered) {
                 context.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, 0x80000000);
 
+                // only show FavoriteWidget if this gif is not a category
                 if (this.getMessage().equals(Text.empty())) {
                     float widgetScale = 0.15f;
-                    FavoriteWidget.configure(_favoriteUrl, (int)((this.getX()+this.width())-FavoriteWidget.defaultSize*widgetScale), this.getY(),widgetScale)
-                            .renderWidget(context, mouseX, mouseY, delta);
+                    if (_usesFavoritedImage) {
+                        FavoriteWidget widget = FavoriteWidget.configure(_sourceHash, (int) ((this.getX() + this.width()) - FavoriteWidget.defaultSize * widgetScale), this.getY(), widgetScale);
+                        if (widget != null) {
+                            widget.renderWidget(context, mouseX, mouseY, delta);
+                        } else {
+                            LOGGER.error("An error occurred while trying to render favorite widget: widget is null");
+                        }
+                    } else {
+                        FavoriteWidget.configure(_favoriteUrl, (int) ((this.getX() + this.width()) - FavoriteWidget.defaultSize * widgetScale), this.getY(), widgetScale)
+                                .renderWidget(context, mouseX, mouseY, delta);
+                    }
                 }
             }
         } catch (Exception e) {
