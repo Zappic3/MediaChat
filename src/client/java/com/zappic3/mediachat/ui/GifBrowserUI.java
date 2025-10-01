@@ -257,7 +257,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         this.showBrowserView(0);
         _gifBrowserOpen = true;
         showGifCategories(TenorService.getFeatured(), true);
-
+        showFavorites();
     }
 
     public void closeGifBrowser() {
@@ -423,11 +423,11 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     private void showFavorites() {
         // clear old gifs
-        //_root.childById(FlowLayout.class, "favorites-container-left").clearChildren();
-        //_root.childById(FlowLayout.class, "favorites-container-right").clearChildren();
+        _favoritesBrowser.childById(FlowLayout.class, "favorites-container-left").clearChildren();
+        _favoritesBrowser.childById(FlowLayout.class, "favorites-container-right").clearChildren();
 
         FavoritesManager favoritesManager = FavoritesManager.getInstance();
-        FlowLayout column = _gifBrowser.childById(FlowLayout.class, "favorites-container-left");
+        FlowLayout column = _root.childById(FlowLayout.class, "gif-container-left"); // this only works if the gif and favorite columns are the same width
         PreviewGifContainer preview = new PreviewGifContainer(0);
         int columnWidth = column != null ? column.width() : 50;
         preview.setColumnWidth(columnWidth);
@@ -447,8 +447,8 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
             preview.addGifWidget(hashcode, dims, null);
         }
 
-        _root.childById(FlowLayout.class, "favorites-container-left").children(preview.getLeftGifs());
-        _root.childById(FlowLayout.class, "favorites-container-right").children(preview.getRightGifs());
+        _favoritesBrowser.childById(FlowLayout.class, "favorites-container-left").children(preview.getLeftGifs());
+        _favoritesBrowser.childById(FlowLayout.class, "favorites-container-right").children(preview.getRightGifs());
     }
 
     /**

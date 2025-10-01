@@ -46,6 +46,7 @@ public class MediaElement {
 
     private  CompletableFuture<Void> loadFuture ;
     private String _source;
+    private Integer _hashCode;
     private volatile List<Identifier> _identifier = new ArrayList<>();
     private int _width;
     private int _height;
@@ -95,6 +96,7 @@ public class MediaElement {
 
     private MediaElement(String source, List<Identifier> ids, boolean saveToCache, Importance importance, long sizeInBit) {
         this._source = source;
+        this._hashCode = source.hashCode();
         this._identifier = ids;
         this._elementId = UUID.randomUUID();
         this._errorMessage = null;
@@ -123,6 +125,7 @@ public class MediaElement {
 
     private MediaElement(int hashcode, List<Identifier> ids, Importance importance, long sizeInBit) {
         this._source = null;
+        this._hashCode = hashcode;
         this._identifier = ids;
         this._elementId = UUID.randomUUID();
         this._errorMessage = null;
@@ -159,6 +162,7 @@ public class MediaElement {
         MediaElement element =  _mediaPool.computeIfAbsent(source.hashCode(), s -> new MediaElement(source, MEDIA_LOADING, saveToCache, importance, -1));
         if (element._source == null) { // this is useful to add a source to images loaded from local cache
             element._source = source;
+            element._hashCode = source.hashCode();
         }
         element._lastTimeUsed = System.currentTimeMillis();
         return element;
@@ -174,13 +178,16 @@ public class MediaElement {
 
     public static MediaElement ofCached(int hashcode, Importance importance) {
         MediaElement element = _mediaPool.computeIfAbsent(hashcode, s -> {
+            LOGGER.warn("Neue Textur Registriert");
             // the actual identifier list will be loaded later
             return new MediaElement(hashcode, new ArrayList<>(), importance, -1);
         });
         element._lastTimeUsed = System.currentTimeMillis();
         if (element._source == null) {
             element._source = String.valueOf(hashcode);
+            element._hashCode = hashcode;
         }
+
         return element;
     }
 
@@ -348,7 +355,13 @@ public class MediaElement {
         for (Identifier id : _identifier) {
             unregisterTexture(id);
         }
-        if (this.source() != null) {
+
+        //this._identifier.clear();
+        //this._frameDelays.clear();
+
+        if (this.hashcode() != null) {
+            _mediaPool.remove(this.hashcode());
+        } else if (this.source() != null) {
             _mediaPool.remove(this.source().hashCode());
         }
     }
@@ -454,6 +467,10 @@ public class MediaElement {
 
     public String source() {
         return _source;
+    }
+
+    public Integer hashcode() {
+        return _hashCode;
     }
 
     public UUID elementId() {
