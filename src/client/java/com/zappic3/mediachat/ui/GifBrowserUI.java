@@ -262,7 +262,11 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     public void closeGifBrowser() {
         // clear searchbar (this is needed when the GIF browser is opened again without reopening the chat interface)
-        _gifBrowser.childById(TextBoxComponent.class, "searchbar").text(getSearchBarDefaultString());
+        // (when the favorites tab is open, there is no search bar)
+        TextBoxComponent searchbar = _gifBrowser.childById(TextBoxComponent.class, "searchbar");
+        if (searchbar != null) {
+            searchbar.text(getSearchBarDefaultString());
+        }
         _root.clearChildren();
         _root.child(_gifButton);
         _gifBrowserOpen = false;
