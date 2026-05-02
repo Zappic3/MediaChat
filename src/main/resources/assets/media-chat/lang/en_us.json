@@ -161,6 +161,7 @@
       "color": "#FF5555"
     }
   ],
+  "text.mediachat.gifBrowser.retryButton": "Retry",
   "text.mediachat.commands.whitelist.playerAdded": "Added %s to the MediaChat-Whitelist",
   "text.mediachat.commands.blacklist.playerAdded": "Added %s to the MediaChat-Blacklist",
   "text.mediachat.commands.whitelist.playerRemoved": "Removed %s from the MediaChat-Whitelist",

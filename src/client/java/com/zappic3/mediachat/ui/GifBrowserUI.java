@@ -510,7 +510,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         layout.child(label);
 
         // retry button
-        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {}); //todo add translation key and add function to button
+        ButtonComponent reloadButton = Components.button(Text.translatable("text.mediachat.gifBrowser.retryButton"), (button) -> {}); //todo add function to button
         layout.child(reloadButton);
         // this needs to be done after the button is inserted into the layout, because before that reloadButton.width() will be 0
         reloadButton.margins(Insets.left((layout.width() - reloadButton.width()) / 2));
