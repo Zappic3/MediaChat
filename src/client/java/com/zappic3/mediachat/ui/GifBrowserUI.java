@@ -492,21 +492,24 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 .orElse(50); // default value (is probably never used)
         int errorImageSize = (int) ((screenHeight/100)*15);
 
+        // error image
         TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 256, 256);
-        errorImage.margins(Insets.of(textMargin));
+        errorImage.margins(Insets.left((layout.width() - errorImageSize) / 2)); // center image
         errorImage.sizing(Sizing.fixed(errorImageSize));
         layout.child(errorImage);
 
+        // error message
         LabelComponent label = Components.label(rawMsg);
         label.maxWidth(layout.width()-(textMargin*2))
                 .horizontalTextAlignment(HorizontalAlignment.CENTER)
                 .margins(Insets.of(textMargin));
-
-        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {}); //todo add translation key and add function to button
-        reloadButton.margins(Insets.of(textMargin));
-
         layout.child(label);
+
+        // retry button
+        ButtonComponent reloadButton = Components.button(Text.of("Retry"), (button) -> {}); //todo add translation key and add function to button
         layout.child(reloadButton);
+        // this needs to be done after the button is inserted into the layout, because before that reloadButton.width() will be 0
+        reloadButton.margins(Insets.left((layout.width() - reloadButton.width()) / 2));
 
         _gifBrowserOpen = false; // todo this is a quick-fix, because when the warning is closed, but the chat screen not exited, the gif category screen wont refresh for some reason
 
