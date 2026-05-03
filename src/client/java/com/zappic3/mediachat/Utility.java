@@ -6,11 +6,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
 import org.slf4j.Logger;
@@ -50,6 +52,18 @@ public class Utility {
             String oldText = chatField.getText();
             chatField.setText(oldText.substring(0, oldCursorPos) + text + oldText.substring(oldCursorPos));
             chatField.setCursor(oldCursorPos + text.length(), false);
+        }
+    }
+
+    /**
+     * Displays a red error message to the player in the in-game chat
+     *
+     * @param message The message to display
+     */
+    public static void displayErrorMessage(String message) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player != null) {
+            player.sendMessage(Text.empty().formatted(Formatting.RED).append(message), false);
         }
     }
 
