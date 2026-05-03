@@ -3,6 +3,9 @@ package com.zappic3.mediachat.ui;
 import com.zappic3.mediachat.FavoritesManager;
 import com.zappic3.mediachat.TenorService;
 import com.zappic3.mediachat.Utility;
+import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
+import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
+import com.zappic3.mediachat.mixin.client.ChatScreenAccessor;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
 import io.wispforest.owo.ui.container.Containers;
@@ -11,6 +14,8 @@ import io.wispforest.owo.ui.core.*;
 import io.wispforest.owo.ui.layers.Layers;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
@@ -18,6 +23,8 @@ import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import net.minecraft.util.math.ColorHelper;
 
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -25,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.zappic3.mediachat.FileUploadHandler.uploadFiles;
 import static com.zappic3.mediachat.MediaChat.*;
 
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
@@ -566,12 +574,56 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
     private PressableGifComponent createGifWidget(int hashcode, String title) {
         PressableGifComponent component = new PressableGifComponent(hashcode, (gifComponent) -> {
+            FavoritesManager favoritesManager = FavoritesManager.getInstance();
+
             if (title != null && !title.isEmpty()) {
                 // todo add functionality for opening folders
             } else {
+                String validUrl = null;
+                String savedUrl = favoritesManager.getMediaSourceURL(hashcode+"");
 
-                // todo: upload gif so it can be shared
-                Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + "todo: upload gif so it can be shared" + CONFIG.endMediaUrl());
+                // try to download the file to see if the URL is valid
+                if (savedUrl != null) {
+                    try {
+                        URI uri = new URI(savedUrl);
+                        FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
+                        DownloadedMedia downloadedMedia = service.downloadWithChecks(uri);
+
+                        if (!downloadedMedia.hasError()) {
+                            validUrl = savedUrl;
+                        }
+                    } catch (Exception e) {
+                        LOGGER.info("Selected favorite element URL is invalid");
+
+                    }
+                }
+
+                // if the URL is not valid, upload file
+                if (validUrl == null) {
+                    String tempText = "";
+                    int tempPos = 0;
+
+                    Screen currentScreen = MinecraftClient.getInstance().currentScreen;
+                    if (currentScreen instanceof ChatScreen) {
+                        TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
+                        if (currentChatField != null) {
+                            tempText = currentChatField.getText();
+                            tempPos = currentChatField.getCursor();
+                        }
+                    }
+
+                    final String currentText = tempText;
+                    final int cursorPos = tempPos;
+
+                    Optional<Path> filepath = FavoritesManager.getFilePath(hashcode);
+                    filepath.ifPresent(path -> uploadFiles(path, currentText, cursorPos, ( uri ) -> {
+                        String newUrl = uri.toString();
+
+                        if (hashcode != newUrl.hashCode()) {
+                            favoritesManager.replaceFavoriteUrl(hashcode+"", newUrl);
+                        }
+                    }));
+                }
                 closeGifBrowser();
             }
         });

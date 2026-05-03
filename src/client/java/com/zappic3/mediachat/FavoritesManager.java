@@ -56,8 +56,47 @@ public class FavoritesManager {
         return props.getProperty(hash);
     }
 
+    public static Optional<Path> getFilePath(int hash) {
+        return FAVORITE_CACHE.getFilePath(hash);
+    }
+
     public OneOfTwo<BufferedImage, AnimatedGif> loadFavoriteFromCache(int hash) {
         return FAVORITE_CACHE.loadFileFromCache(hash);
+    }
+
+
+    /**
+     * Replaces the filename of the old file with the hash of the newUrl
+     *
+     * @param prevHash hash (filename) of the file to replace
+     * @param newUrl the url that leads to the new file location
+     */
+    public void replaceFavoriteUrl(String prevHash, String newUrl) {
+        String newHash = newUrl.hashCode()+"";
+
+        // update filename
+        ListIterator<Path> iterator = _favoritesList.listIterator();
+        while (iterator.hasNext()) {
+            Path path = iterator.next();
+            if (path.getFileName().toString().contains(prevHash)) {
+
+                String oldName = path.getFileName().toString();
+                String newName = oldName.replace(prevHash, newHash);
+                Path newPath = path.resolveSibling(newName);
+
+                try {
+                    Files.move(path, newPath, StandardCopyOption.REPLACE_EXISTING);
+                    iterator.set(newPath);
+                } catch (IOException e) {
+                    LOGGER.error("failed to update filename", e);
+                }
+                break;
+            }
+        }
+
+        // update name in the propFile
+        removeFavProps(prevHash);
+        addFavProp(newHash, newUrl);
     }
 
     private void removeFavorite(int hash) {
@@ -183,7 +222,9 @@ public class FavoritesManager {
 
     private List<Path> getAllFavoriteFiles(Path folder) {
         try (Stream<Path> paths = Files.walk(folder, 10)) {
-            return paths.filter(Files::isRegularFile) // Only include files, not directories
+            return paths
+                    .filter(Files::isRegularFile) // Only include files, not directories
+                    .filter(path -> !path.equals(propFile)) // Exclude the prop file
                     .collect(Collectors.toList());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -199,7 +240,7 @@ public class FavoritesManager {
         }
 
         Properties props = new Properties();
-        try (FileInputStream in = new FileInputStream("hashes.properties")) {
+        try (FileInputStream in = new FileInputStream(f)) {
             props.load(in);
         } catch (FileNotFoundException e) {
             LOGGER.error("File wasn't found, even though it should've been created moments ago", e);

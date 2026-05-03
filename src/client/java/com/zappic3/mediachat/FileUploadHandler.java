@@ -13,6 +13,7 @@ import net.minecraft.util.Formatting;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -22,10 +23,53 @@ import static com.zappic3.mediachat.MediaChat.LOGGER;
 import static com.zappic3.mediachat.Utility.displayErrorMessage;
 
 public class FileUploadHandler {
+
+    /**
+     * @see FileUploadHandler#uploadFiles(List, String, int, Consumer)
+     */
+    public static void uploadFiles(
+            Path path,
+            String currentText,
+            int cursorPos,
+            Consumer<URI> uriConsumer
+    ) {
+        List<Path> pathList = new LinkedList<>();
+        pathList.add(path);
+        uploadFiles(pathList, currentText, cursorPos, uriConsumer);
+    }
+
+    public static void uploadFiles(
+            Path path,
+            String currentText,
+            int cursorPos
+    ) {
+        List<Path> pathList = new LinkedList<>();
+        pathList.add(path);
+
+        uploadFiles(pathList, currentText, cursorPos);
+    }
+
+    public static void uploadFiles(
+            List<Path> paths,
+            String currentText,
+            int cursorPos
+    ) {
+        uploadFiles(paths, currentText, cursorPos, (uri) -> {});
+    }
+
+    /**
+     * Uploads all given files to a selected upload service and inserts the URLs into the chat
+     *
+     * @param paths list of file paths to upload
+     * @param currentText current text in the chat screen
+     * @param cursorPos current cursor position in the chat screen
+     * @param uriConsumer a function that is called for every new URI received from the upload service
+     */
     public static void uploadFiles(
         List<Path> paths,
         String currentText,
-        int cursorPos
+        int cursorPos,
+        Consumer<URI> uriConsumer
     ) {
         Consumer<FileSharingService.FileHostingService> consumer = (selectedService) -> {
             StringBuilder newChatField = new StringBuilder();
@@ -54,6 +98,7 @@ public class FileUploadHandler {
                                     currentChatField.setCursor(oldCursorPos + (newChatFieldText.length() - oldChatFieldText.length()), false);
                                 }
                             });
+                            uriConsumer.accept(uri);
                         } else {
                             if (service.getErrorMessage() != null) {
                                 LOGGER.error(service.getErrorMessage());
@@ -73,7 +118,6 @@ public class FileUploadHandler {
                     });
                 });
             }
-
 
             MinecraftClient.getInstance().setScreen(new ChatScreen(currentText.substring(0, cursorPos) + newChatField + currentText.substring(cursorPos)));
             Screen currentScreen = MinecraftClient.getInstance().currentScreen;
