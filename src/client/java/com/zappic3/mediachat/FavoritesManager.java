@@ -10,8 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,7 +27,9 @@ import static com.zappic3.mediachat.MediaChat.*;
 import static com.zappic3.mediachat.MediaChatClient.CLIENT_CACHE;
 
 public class FavoritesManager {
-    private static final MediaCache FAVORITE_CACHE = new MediaCache(MediaCache.getOSRoot().resolve("Favorites"));
+    private static final Path favoritesLocation = MediaCache.getOSRoot().resolve("Favorites");
+    private static final MediaCache FAVORITE_CACHE = new MediaCache(favoritesLocation);
+    private static final Path propFile = favoritesLocation.resolve("media.properties");
     private static FavoritesManager instance;
     private final List<Path> _favoritesList = getAllFavoriteFiles(FAVORITE_CACHE.getCachePath());
     private final Set<Integer> _activeOperations = new HashSet<>();
@@ -50,6 +51,11 @@ public class FavoritesManager {
         return FAVORITE_CACHE.isFileInCache(hash);
     }
 
+    public String getMediaSourceURL(String hash) {
+        Properties props = getFavProps();
+        return props.getProperty(hash);
+    }
+
     public OneOfTwo<BufferedImage, AnimatedGif> loadFavoriteFromCache(int hash) {
         return FAVORITE_CACHE.loadFileFromCache(hash);
     }
@@ -64,6 +70,7 @@ public class FavoritesManager {
                     break;
                 }
             }
+            removeFavProps(hash + "");
         }
     }
 
@@ -80,6 +87,7 @@ public class FavoritesManager {
                     }
                     Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
                     _favoritesList.add(targetFile);
+                    addFavProp(url.hashCode() + "", url);
                     return;
                 } catch (IOException e) {
                     LOGGER.error("Failed to add favorite file (error trying to copy file)", e);
@@ -106,6 +114,7 @@ public class FavoritesManager {
                     AnimatedGif gif = new AnimatedGif(reader);
                     try {
                         FAVORITE_CACHE.saveGifToCache(gif, url.hashCode());
+                        addFavProp(url.hashCode() + "", url);
                     } catch (IOException e) {
                         LOGGER.error("Failed to save gif", e);
                     }
@@ -113,6 +122,7 @@ public class FavoritesManager {
                     try {
                         BufferedImage image = ImageIO.read(bais);
                         FAVORITE_CACHE.saveMediaToCache(image, url.hashCode(), "png");
+                        addFavProp(url.hashCode() + "", url);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -138,6 +148,7 @@ public class FavoritesManager {
 
                     Optional<Path> newFilePathOption = FAVORITE_CACHE.getFilePath(url.hashCode());
                     newFilePathOption.ifPresent(_favoritesList::add);
+                    addFavProp(url.hashCode() + "", url);
                 }
 
             } catch (Exception e) {
@@ -177,5 +188,49 @@ public class FavoritesManager {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Properties getFavProps() {
+        File f = propFile.toFile();
+        try {
+            f.createNewFile(); // creates new file if it doesn't exist already
+        } catch (IOException e) {
+            LOGGER.warn("IOException while trying to create prop file", e);
+        }
+
+        Properties props = new Properties();
+        try (FileInputStream in = new FileInputStream("hashes.properties")) {
+            props.load(in);
+        } catch (FileNotFoundException e) {
+            LOGGER.error("File wasn't found, even though it should've been created moments ago", e);
+        } catch (IOException e) {
+            LOGGER.warn("IOException while trying to load prop file", e);
+        }
+
+        return props;
+    }
+
+    private void setFavProps(Properties props) {
+        File f = propFile.toFile();
+        try (FileOutputStream out = new FileOutputStream(f)) {
+            props.store(out, null); // null = no comment header
+        } catch (FileNotFoundException e) {
+            LOGGER.error("Prop file is directory or cant be opened", e);
+        } catch (IOException e) {
+            LOGGER.error("Error writing to prop file", e);
+        }
+    }
+
+    private void addFavProp(String hash, String url) {
+        // todo check if server:uuid type media sources need to be blocked
+        Properties props = getFavProps();
+        props.setProperty(hash, url);
+        setFavProps(props);
+    }
+
+    private void removeFavProps(String hash) {
+        Properties props = getFavProps();
+        props.remove(hash);
+        setFavProps(props);
     }
 }
