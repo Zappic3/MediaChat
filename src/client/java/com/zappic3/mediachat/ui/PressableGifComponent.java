@@ -40,7 +40,7 @@ public class PressableGifComponent extends ButtonWidget {
     }
 
     /**
-      This methode supposed to be used for elements that are currently favorited,
+      This methode is supposed to be used for elements that are currently favorited,
       because their URL is not known
      */
     public PressableGifComponent(int hashcode, Consumer<PressableGifComponent> onPress) {
