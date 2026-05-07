@@ -509,7 +509,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
 
         // error image
         TextureComponent errorImage = Components.texture(errorImageIdentifier, 0, 0, 256, 256);
-        errorImage.margins(Insets.left((layout.width() - errorImageSize) / 2)); // center image
+        errorImage.margins(Insets.of(5, 0, (layout.width() - errorImageSize) / 2, 0)); // center image
         errorImage.sizing(Sizing.fixed(errorImageSize));
         layout.child(errorImage);
 
