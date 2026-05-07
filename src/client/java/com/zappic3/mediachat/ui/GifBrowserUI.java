@@ -71,8 +71,8 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
         _loadingLabel = buildLoadingLabel();
         _searchEnabled = true;
 
-        this.addViewToBrowser(_gifBrowser, "Search"); // todo use actual translation keys
-        this.addViewToBrowser(_favoritesBrowser, "Favorites");
+        this.addViewToBrowser(_gifBrowser, "text.mediachat.gifBrowser.searchTab");
+        this.addViewToBrowser(_favoritesBrowser, "text.mediachat.gifBrowser.favoritesTab");
         _browserParent = buildBrowserParent();
 
     }
@@ -104,7 +104,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     }
 
     private LoadingLabelComponent buildLoadingLabel() {
-        LoadingLabelComponent label = new LoadingLabelComponent(Text.of("Loading..."), () -> true);
+        LoadingLabelComponent label = new LoadingLabelComponent(Text.translatable("text.mediachat.gifBrowser.loadingText"), () -> true);
         label.horizontalTextAlignment(HorizontalAlignment.CENTER)
                 .verticalTextAlignment(VerticalAlignment.CENTER)
                 .sizing(Sizing.fill(), Sizing.fixed(100))
@@ -229,7 +229,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     }
 
     private ButtonComponent buildGifButton() {
-        ButtonComponent button = new UnfocusableButton(Text.of("Browse Gifs"), buttonComponent -> { // todo use translation key
+        ButtonComponent button = new UnfocusableButton(Text.translatable("text.mediachat.gifBrowser.openButton"), buttonComponent -> {
             openGifBrowser();
         });
         button.positioning(Positioning.relative(100, 100))

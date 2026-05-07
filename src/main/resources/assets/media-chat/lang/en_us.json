@@ -162,6 +162,10 @@
     }
   ],
   "text.mediachat.gifBrowser.retryButton": "Retry",
+  "text.mediachat.gifBrowser.searchTab": "Search",
+  "text.mediachat.gifBrowser.favoritesTab": "Favorites",
+  "text.mediachat.gifBrowser.loadingText": "Loading...",
+  "text.mediachat.gifBrowser.openButton": "Browse Gifs",
   "text.mediachat.commands.whitelist.playerAdded": "Added %s to the MediaChat-Whitelist",
   "text.mediachat.commands.blacklist.playerAdded": "Added %s to the MediaChat-Blacklist",
   "text.mediachat.commands.whitelist.playerRemoved": "Removed %s from the MediaChat-Whitelist",
@@ -195,5 +199,6 @@
   "text.mediachat.confirmUploadScreen.currentlySelected": "Currently Selected:\n%s",
   "text.mediachat.confirmUploadScreen.popupReason.generic": "(You're seeing this because %s is currently unavailable)",
   "text.mediachat.confirmUploadScreen.popupReason.server": "(You're seeing this because this server doesnt allow file uploading)",
-  "text.mediachat.confirmUploadScreen.checkbox.tooltip": "This will override your current default file hosting service (%s)"
+  "text.mediachat.confirmUploadScreen.checkbox.tooltip": "This will override your current default file hosting service (%s)",
+  "text.mediachat.fileUploadHandler.uploadError": "An error occurred while uploading file"
 }

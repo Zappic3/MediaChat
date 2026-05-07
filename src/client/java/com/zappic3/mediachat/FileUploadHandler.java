@@ -105,7 +105,7 @@ public class FileUploadHandler {
                                 displayErrorMessage(service.getErrorMessage());
                             } else {
                                 LOGGER.error("An error occurred while uploading file");
-                                displayErrorMessage("An error occurred while uploading file"); // todo localize
+                                displayErrorMessage(Text.translatable("text.mediachat.fileUploadHandler.uploadError").getString());
                             }
                         }
                     }).exceptionally(actualException -> {
