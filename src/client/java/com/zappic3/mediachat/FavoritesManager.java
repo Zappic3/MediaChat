@@ -263,10 +263,12 @@ public class FavoritesManager {
     }
 
     private void addFavProp(String hash, String url) {
-        // todo check if server:uuid type media sources need to be blocked
-        Properties props = getFavProps();
-        props.setProperty(hash, url);
-        setFavProps(props);
+        // don't save locations that are saved on the server
+        if (!url.startsWith("server:")) {
+            Properties props = getFavProps();
+            props.setProperty(hash, url);
+            setFavProps(props);
+        }
     }
 
     private void removeFavProps(String hash) {

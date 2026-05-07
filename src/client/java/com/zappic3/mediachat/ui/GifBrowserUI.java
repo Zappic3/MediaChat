@@ -1,8 +1,6 @@
 package com.zappic3.mediachat.ui;
 
-import com.zappic3.mediachat.FavoritesManager;
-import com.zappic3.mediachat.TenorService;
-import com.zappic3.mediachat.Utility;
+import com.zappic3.mediachat.*;
 import com.zappic3.mediachat.filesharing.filesharing.DownloadedMedia;
 import com.zappic3.mediachat.filesharing.filesharing.FileSharingService;
 import com.zappic3.mediachat.mixin.client.ChatScreenAccessor;
@@ -583,7 +581,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 String savedUrl = favoritesManager.getMediaSourceURL(hashcode+"");
 
                 // try to download the file to see if the URL is valid
-                if (savedUrl != null) {
+                if (savedUrl != null && CONFIG.favoriteMediaShareMode() == ConfigModel.FavoriteMediaShareMode.SMART) {
                     try {
                         URI uri = new URI(savedUrl);
                         FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
@@ -599,7 +597,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                 }
 
                 // if the URL is not valid, upload file
-                if (validUrl == null) {
+                if (validUrl == null && !(CONFIG.favoriteMediaShareMode() == ConfigModel.FavoriteMediaShareMode.ALWAYS_SAVED)) {
                     String tempText = "";
                     int tempPos = 0;
 
@@ -623,8 +621,21 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                             favoritesManager.replaceFavoriteUrl(hashcode+"", newUrl);
                         }
                     }));
+                } else {
+                    // if the URL is valid, insert it
+                    Screen currentScreen = MinecraftClient.getInstance().currentScreen;
+                    if (currentScreen instanceof ChatScreen) {
+                        TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
+                        String currentText = currentChatField.getText();
+                        int cursorPos = currentChatField.getCursor();
+
+                        String wrappedUrl = (CONFIG.startMediaUrl()) + (validUrl) + (CONFIG.endMediaUrl());
+                        MinecraftClient.getInstance().setScreen(
+                                new ChatScreen(currentText.substring(0, cursorPos)
+                                        + wrappedUrl
+                                        + currentText.substring(cursorPos)));
+                    }
                 }
-                closeGifBrowser();
             }
         });
         component.margins(Insets.of(1));

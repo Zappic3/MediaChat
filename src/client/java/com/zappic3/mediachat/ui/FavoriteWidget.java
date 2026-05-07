@@ -56,7 +56,7 @@ public final class FavoriteWidget extends ButtonWidget {
     }
 
     /**
-     * Initalises the FavriteWidget. Expects the elementHash to belong to an Element
+     * Initializes the FavoriteWidget. Expects the elementHash to belong to an Element
      * in the FAVORITE_CACHE
      * @param elementHash
      * @param x

@@ -540,6 +540,7 @@ public class MediaElement {
         }
     }
 
+    // todo implement translation
     public Text getTooltip() {
         StringBuilder tooltip = new StringBuilder();
         if (_errorMessage != null) {

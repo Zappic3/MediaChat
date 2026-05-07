@@ -47,6 +47,8 @@ public class ConfigModel {
 
     public int maxCacheSize = 200; // value in mb
 
+    public FavoriteMediaShareMode favoriteMediaShareMode = FavoriteMediaShareMode.SMART;
+
     public boolean displayDebugScreenInfos = true;
 
     public boolean autoWrapUrlsOnPasteShortcut = true;
@@ -103,6 +105,15 @@ public class ConfigModel {
 
     public enum ServerMediaPermissionMode {
         OFF, WHITELIST, BLACKLIST
+    }
+
+    /**
+     * SMART: Checks if the saved URL is reachable. yes -> send URL; no -> reupload
+     * ALWAYS_SAVED: Always uses the saved URL, even when the file is no longer reachable
+     * ALWAYS_REUPLOAD: Always reuploads the file
+     */
+    public enum FavoriteMediaShareMode {
+        SMART, ALWAYS_SAVED, ALWAYS_REUPLOAD
     }
 
     /**
