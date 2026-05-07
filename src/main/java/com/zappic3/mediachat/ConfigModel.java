@@ -41,7 +41,7 @@ public class ConfigModel {
     public float maxMediaWidth = 1.0F;
 
     @PredicateConstraint("maxMediaSizePredicate")
-    public int maxMediaSize = 30;
+    public int maxMediaSize = 30; // todo check if this even works
 
     public Boolean cacheMedia = true;
 

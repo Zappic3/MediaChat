@@ -261,7 +261,9 @@ public class MediaElement {
         return null;
     }
 
-    // todo dieses gif funktioniert nicht, warum? https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
+    // todo this is an example of a gif that has incorrect filetype metadata.
+    //  Maybe in the future filetype detection can be improved.
+    //  https://s1882.pcdn.co/wp-content/uploads/VoaBStransp.gif
     private MediaIdentifierInfo downloadMedia(String source, boolean saveToCache) {
         DownloadedMedia downloadedMedia;
 
