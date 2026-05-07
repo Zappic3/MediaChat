@@ -29,9 +29,9 @@ import static com.zappic3.mediachat.MediaChatClient.CLIENT_CACHE;
 public class FavoritesManager {
     private static final Path favoritesLocation = MediaCache.getOSRoot().resolve("Favorites");
     private static final MediaCache FAVORITE_CACHE = new MediaCache(favoritesLocation);
-    private static final Path propFile = favoritesLocation.resolve("media.properties");
     private static FavoritesManager instance;
     private final List<Path> _favoritesList = getAllFavoriteFiles(FAVORITE_CACHE.getCachePath());
+    private final Map<Integer, String> sessionFavoriteUrls = new HashMap<>();
     private final Set<Integer> _activeOperations = new HashSet<>();
 
     private FavoritesManager() {}
@@ -51,28 +51,28 @@ public class FavoritesManager {
         return FAVORITE_CACHE.isFileInCache(hash);
     }
 
-    public String getMediaSourceURL(String hash) {
-        Properties props = getFavProps();
-        return props.getProperty(hash);
-    }
-
     public static Optional<Path> getFilePath(int hash) {
         return FAVORITE_CACHE.getFilePath(hash);
     }
+
+    public String getFavoriteUrl(int hash) {
+        return sessionFavoriteUrls.get(hash);
+    }
+
 
     public OneOfTwo<BufferedImage, AnimatedGif> loadFavoriteFromCache(int hash) {
         return FAVORITE_CACHE.loadFileFromCache(hash);
     }
 
-
     /**
      * Replaces the filename of the old file with the hash of the newUrl
+     * Also saves the URL in the sessionFavoriteUrls cache
      *
      * @param prevHash hash (filename) of the file to replace
      * @param newUrl the url that leads to the new file location
      */
     public void replaceFavoriteUrl(String prevHash, String newUrl) {
-        String newHash = newUrl.hashCode()+"";
+        int newHash = newUrl.hashCode();
 
         // update filename
         ListIterator<Path> iterator = _favoritesList.listIterator();
@@ -81,7 +81,7 @@ public class FavoritesManager {
             if (path.getFileName().toString().contains(prevHash)) {
 
                 String oldName = path.getFileName().toString();
-                String newName = oldName.replace(prevHash, newHash);
+                String newName = oldName.replace(prevHash, newHash+"");
                 Path newPath = path.resolveSibling(newName);
 
                 try {
@@ -93,10 +93,8 @@ public class FavoritesManager {
                 break;
             }
         }
-
-        // update name in the propFile
-        removeFavProps(prevHash);
-        addFavProp(newHash, newUrl);
+        // todo check if it is necessary to remove the old sessionFavoriteUrls entry
+        sessionFavoriteUrls.put(newHash, newUrl);
     }
 
     private void removeFavorite(int hash) {
@@ -109,7 +107,7 @@ public class FavoritesManager {
                     break;
                 }
             }
-            removeFavProps(hash + "");
+            sessionFavoriteUrls.remove(hash);
         }
     }
 
@@ -126,7 +124,7 @@ public class FavoritesManager {
                     }
                     Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
                     _favoritesList.add(targetFile);
-                    addFavProp(url.hashCode() + "", url);
+                    sessionFavoriteUrls.put(url.hashCode(), url);
                     return;
                 } catch (IOException e) {
                     LOGGER.error("Failed to add favorite file (error trying to copy file)", e);
@@ -153,7 +151,6 @@ public class FavoritesManager {
                     AnimatedGif gif = new AnimatedGif(reader);
                     try {
                         FAVORITE_CACHE.saveGifToCache(gif, url.hashCode());
-                        addFavProp(url.hashCode() + "", url);
                     } catch (IOException e) {
                         LOGGER.error("Failed to save gif", e);
                     }
@@ -161,7 +158,6 @@ public class FavoritesManager {
                     try {
                         BufferedImage image = ImageIO.read(bais);
                         FAVORITE_CACHE.saveMediaToCache(image, url.hashCode(), "png");
-                        addFavProp(url.hashCode() + "", url);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -187,7 +183,6 @@ public class FavoritesManager {
 
                     Optional<Path> newFilePathOption = FAVORITE_CACHE.getFilePath(url.hashCode());
                     newFilePathOption.ifPresent(_favoritesList::add);
-                    addFavProp(url.hashCode() + "", url);
                 }
 
             } catch (Exception e) {
@@ -224,56 +219,9 @@ public class FavoritesManager {
         try (Stream<Path> paths = Files.walk(folder, 10)) {
             return paths
                     .filter(Files::isRegularFile) // Only include files, not directories
-                    .filter(path -> !path.equals(propFile)) // Exclude the prop file
                     .collect(Collectors.toList());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private Properties getFavProps() {
-        File f = propFile.toFile();
-        try {
-            f.createNewFile(); // creates new file if it doesn't exist already
-        } catch (IOException e) {
-            LOGGER.warn("IOException while trying to create prop file", e);
-        }
-
-        Properties props = new Properties();
-        try (FileInputStream in = new FileInputStream(f)) {
-            props.load(in);
-        } catch (FileNotFoundException e) {
-            LOGGER.error("File wasn't found, even though it should've been created moments ago", e);
-        } catch (IOException e) {
-            LOGGER.warn("IOException while trying to load prop file", e);
-        }
-
-        return props;
-    }
-
-    private void setFavProps(Properties props) {
-        File f = propFile.toFile();
-        try (FileOutputStream out = new FileOutputStream(f)) {
-            props.store(out, null); // null = no comment header
-        } catch (FileNotFoundException e) {
-            LOGGER.error("Prop file is directory or cant be opened", e);
-        } catch (IOException e) {
-            LOGGER.error("Error writing to prop file", e);
-        }
-    }
-
-    private void addFavProp(String hash, String url) {
-        // don't save locations that are saved on the server
-        if (!url.startsWith("server:")) {
-            Properties props = getFavProps();
-            props.setProperty(hash, url);
-            setFavProps(props);
-        }
-    }
-
-    private void removeFavProps(String hash) {
-        Properties props = getFavProps();
-        props.remove(hash);
-        setFavProps(props);
     }
 }

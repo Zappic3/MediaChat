@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.zappic3.mediachat.FileUploadHandler.uploadFiles;
 import static com.zappic3.mediachat.MediaChat.*;
+import static com.zappic3.mediachat.Utility.insertStringAtCursorPos;
 
 public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
     private static final Identifier NO_INTERNET_TEXTURE =  Identifier.of(MOD_ID, "textures/media_no_internet.png");
@@ -449,12 +450,16 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
             String baseName = (dotIndex == -1)
                     ? fileNameWithExtension
                     : fileNameWithExtension.substring(0, dotIndex);
-            int hashcode = Integer.parseInt(baseName); // lese den hashcode im dateinamen aus
+            try {
+                int hashcode = Integer.parseInt(baseName); // lese den hashcode im dateinamen aus
+                List<Integer> dims = new ArrayList<>();
+                dims.add(50);
+                dims.add(50);
+                preview.addGifWidget(hashcode, dims, null);
+            } catch (Exception e) {
+                LOGGER.error("Error trying to parse filename as int");
+            }
 
-            List<Integer> dims = new ArrayList<>();
-            dims.add(50);
-            dims.add(50);
-            preview.addGifWidget(hashcode, dims, null);
         }
 
         _favoritesBrowser.childById(FlowLayout.class, "favorites-container-left").children(preview.getLeftGifs());
@@ -556,7 +561,7 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                     insertedUrl = bigGifUrl;
                 }
 
-                Utility.insertStringAtCursorPos(CONFIG.startMediaUrl() + insertedUrl + CONFIG.endMediaUrl());
+                insertStringAtCursorPos(CONFIG.startMediaUrl() + insertedUrl + CONFIG.endMediaUrl());
                 closeGifBrowser();
             }
         }, bigGifUrl);
@@ -577,27 +582,10 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
             if (title != null && !title.isEmpty()) {
                 // todo add functionality for opening folders
             } else {
-                String validUrl = null;
-                String savedUrl = favoritesManager.getMediaSourceURL(hashcode+"");
-
-                // try to download the file to see if the URL is valid
-                if (savedUrl != null && CONFIG.favoriteMediaShareMode() == ConfigModel.FavoriteMediaShareMode.SMART) {
-                    try {
-                        URI uri = new URI(savedUrl);
-                        FileSharingService service = FileSharingService.getDownloadServiceFor(uri);
-                        DownloadedMedia downloadedMedia = service.downloadWithChecks(uri);
-
-                        if (!downloadedMedia.hasError()) {
-                            validUrl = savedUrl;
-                        }
-                    } catch (Exception e) {
-                        LOGGER.info("Selected favorite element URL is invalid");
-
-                    }
-                }
-
-                // if the URL is not valid, upload file
-                if (validUrl == null && !(CONFIG.favoriteMediaShareMode() == ConfigModel.FavoriteMediaShareMode.ALWAYS_SAVED)) {
+                // check if the gif is already associated with an URL
+                String url = favoritesManager.getFavoriteUrl(hashcode);
+                if (url == null) {
+                    // if not, upload element
                     String tempText = "";
                     int tempPos = 0;
 
@@ -616,26 +604,19 @@ public class GifBrowserUI extends BaseOwoScreen<FlowLayout> {
                     Optional<Path> filepath = FavoritesManager.getFilePath(hashcode);
                     filepath.ifPresent(path -> uploadFiles(path, currentText, cursorPos, ( uri ) -> {
                         String newUrl = uri.toString();
-
-                        if (hashcode != newUrl.hashCode()) {
-                            favoritesManager.replaceFavoriteUrl(hashcode+"", newUrl);
-                        }
+                        // associate new URL with MediaElement
+                        favoritesManager.replaceFavoriteUrl(hashcode+"", newUrl);
                     }));
                 } else {
-                    // if the URL is valid, insert it
-                    Screen currentScreen = MinecraftClient.getInstance().currentScreen;
-                    if (currentScreen instanceof ChatScreen) {
-                        TextFieldWidget currentChatField = ((ChatScreenAccessor) currentScreen).getChatField();
-                        String currentText = currentChatField.getText();
-                        int cursorPos = currentChatField.getCursor();
-
-                        String wrappedUrl = (CONFIG.startMediaUrl()) + (validUrl) + (CONFIG.endMediaUrl());
-                        MinecraftClient.getInstance().setScreen(
-                                new ChatScreen(currentText.substring(0, cursorPos)
-                                        + wrappedUrl
-                                        + currentText.substring(cursorPos)));
-                    }
+                    insertStringAtCursorPos(
+                            CONFIG.startMediaUrl()
+                            + url
+                            + CONFIG.endMediaUrl()
+                    );
                 }
+
+
+
             }
         });
         component.margins(Insets.of(1));

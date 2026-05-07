@@ -108,7 +108,7 @@ public abstract class ChatHudMixin {
                 oldSize = Integer.parseInt(getMessageTagValue(text, MESSAGE_TAG.BufferGenerated));
             } else {
                 int index = plainMessage.indexOf("#");
-                if (index != -1) {
+                if (isValidBufferPrefix(plainMessage)) {
                     if (!plainMessage.substring(0, index).isEmpty()) {
                         oldSize = Integer.parseInt(plainMessage.substring(0, index)) + 1;
                     }
@@ -202,7 +202,7 @@ public abstract class ChatHudMixin {
             int maxNeededChatLines = (int) Math.ceil(maxNeededHeight / calculateChatHeight(1))-1; // subtract one line, because the first line doesn't count towards this limit
 
             int index = plainMessage.indexOf("#");
-            if (index != -1) {
+            if (isValidBufferPrefix(plainMessage)) {
                 int topMessageIndex = getMessagePos(text) + Integer.parseInt(plainMessage.substring(0, index))+1;
                 ChatHudLine.Visible visible = visibleMessages.get(topMessageIndex);
                 OrderedText topMessageContent = visible.content();
@@ -384,7 +384,7 @@ public abstract class ChatHudMixin {
             if (!messageHasTag(text, MESSAGE_TAG.BufferGenerated)) {
                 String textString = orderedTextToString(text);
                 int index = textString.indexOf("#");
-                if (index != -1) {
+                if (isValidBufferPrefix(textString)) {
                     int topMessageIndex = currentMessageIndex + Integer.parseInt(textString.substring(0, index))+1;
                     ChatHudLine.Visible visible = visibleMessages.get(topMessageIndex);
                     topMessage = visible.content();
@@ -459,6 +459,8 @@ public abstract class ChatHudMixin {
 
 
         if (CONFIG.debugOptions.renderImages()) {
+            context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight-chatDistanceFromWindowBottom);
+            if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
             // draw image
             context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
 
@@ -472,13 +474,7 @@ public abstract class ChatHudMixin {
                 context.fill(0, limitedBottomBorderHeight, corrected_width, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // x-bottom
                 isTextureHovered = true;
 
-            }
-
-            context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight-chatDistanceFromWindowBottom);
-            if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
-
-            // render favorite widget in the corner
-            if (isTextureHovered) {
+                // render favorite widget in the corner
                 float widgetScale = 2.2f;
 
                 int widgetLeftBorder = (int)(corrected_width-(FavoriteWidget.defaultSize*widgetScale));

@@ -159,4 +159,12 @@ public class MediaMessageUtility {
         }
         return null;
     }
+
+    public static boolean isValidBufferPrefix(String text) {
+        int index = text.indexOf("#");
+        if (index == -1) return false;
+        String prefix = text.substring(0, index);
+        if (prefix.isEmpty()) return false;
+        return prefix.chars().allMatch(Character::isDigit);
+    }
 }
