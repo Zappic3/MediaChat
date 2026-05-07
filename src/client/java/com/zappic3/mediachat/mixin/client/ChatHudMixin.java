@@ -444,7 +444,6 @@ public abstract class ChatHudMixin {
         int chatDistanceFromWindowBottom = 40;
         int ScissorY  = (int)(windowHeight - ((roundedChatHeight * chatScale) + chatDistanceFromWindowBottom));
 
-        // ########################################################
         // clamp numbers inside the chatbox
         int relativeChatTopBorder = (int) ((ScissorY - yWithBuffer) / finalScaleFactor);
         int relativeChatBottomBorder = (int) (((windowHeight-chatDistanceFromWindowBottom) - yWithBuffer) / finalScaleFactor);
@@ -458,25 +457,25 @@ public abstract class ChatHudMixin {
         boolean isHovered = inverseMouseX >= 0 && inverseMouseX <= corrected_width &&
                 inverseMouseY >= limitedTopBorderHeight && inverseMouseY <= limitedBottomBorderHeight;
 
-        // run when image is hovered
-        int borderThickness = (int) (2 / finalScaleFactor);
-        if ((MinecraftClient.getInstance().currentScreen instanceof ChatScreen && isHovered)) {
-            // border highlight lines
-            context.fill(0, limitedTopBorderHeight -borderThickness, -borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-left
-            context.fill(corrected_width, limitedTopBorderHeight -borderThickness, corrected_width+borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-right
-            context.fill(0, limitedTopBorderHeight, corrected_width, limitedTopBorderHeight -borderThickness, 0xFFFFFFFF); // x-top
-            context.fill(0, limitedBottomBorderHeight, corrected_width, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // x-bottom
-            isTextureHovered = true;
-        }
-        // ########################################################
 
-
-        context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight-chatDistanceFromWindowBottom);
-        if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
-
-        // draw image
         if (CONFIG.debugOptions.renderImages()) {
+            // draw image
             context.drawTexture(texture, 0, 0, 0, 0, corrected_width, corrected_height, corrected_width, corrected_height);
+
+            // run when image is hovered
+            int borderThickness = (int) (2 / finalScaleFactor);
+            if ((MinecraftClient.getInstance().currentScreen instanceof ChatScreen && isHovered)) {
+                // border highlight lines
+                context.fill(0, limitedTopBorderHeight -borderThickness, -borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-left
+                context.fill(corrected_width, limitedTopBorderHeight -borderThickness, corrected_width+borderThickness, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // y-right
+                context.fill(0, limitedTopBorderHeight, corrected_width, limitedTopBorderHeight -borderThickness, 0xFFFFFFFF); // x-top
+                context.fill(0, limitedBottomBorderHeight, corrected_width, limitedBottomBorderHeight+borderThickness, 0xFFFFFFFF); // x-bottom
+                isTextureHovered = true;
+
+            }
+
+            context.enableScissor(0, ScissorY, client.getWindow().getWidth(), windowHeight-chatDistanceFromWindowBottom);
+            if (CONFIG.debugOptions.displayScissorArea()) {context.fill(-999999999, -999999999, 999999999, 999999999, 0x66FF0000);}
 
             // render favorite widget in the corner
             if (isTextureHovered) {

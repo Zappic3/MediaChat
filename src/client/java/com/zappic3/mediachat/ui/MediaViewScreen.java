@@ -61,7 +61,9 @@ public class MediaViewScreen extends BaseOwoScreen<FlowLayout> {
                 (int)(_mediaElement.height()*_imageScale),
                 (int)(_mediaElement.width()*_imageScale),
                 (int)(_mediaElement.height()*_imageScale)
-        ).positioning(Positioning.absolute((int) _imagePosX, (int) _imagePosY));
+        )
+        .blend(true)
+        .positioning(Positioning.absolute((int) _imagePosX, (int) _imagePosY));
 
         if (_root != null) {
             if (_currentImageComp != null) {
