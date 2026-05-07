@@ -200,5 +200,12 @@
   "text.mediachat.confirmUploadScreen.popupReason.generic": "(You're seeing this because %s is currently unavailable)",
   "text.mediachat.confirmUploadScreen.popupReason.server": "(You're seeing this because this server doesnt allow file uploading)",
   "text.mediachat.confirmUploadScreen.checkbox.tooltip": "This will override your current default file hosting service (%s)",
-  "text.mediachat.fileUploadHandler.uploadError": "An error occurred while uploading file"
+  "text.mediachat.fileUploadHandler.uploadError": "An error occurred while uploading file",
+  "text.mediachat.mediaElement.downloadError": "Error while downloading Image: \n%s",
+  "text.mediachat.mediaElement.registerError": "Error while registering image: \n%s",
+  "text.mediachat.mediaElement.tooltip.error": "§4Error:§c %s",
+  "text.mediachat.mediaElement.tooltip.source": "§eSource:§b %s",
+  "text.mediachat.mediaElement.tooltip.source.loadedFromDisk": "Local Cache",
+  "text.mediachat.mediaElement.tooltip.filesize": "§eSize:§b %s",
+  "text.mediachat.mediaElement.tooltip.keybinds": "§7<L-Click§8 Open Image>\n§7<R-Click>§8 Copy URL\n§7<Shift+L-Click>§8 Reload Image\n§7<Shift+R-Click>§8 Insert URL"
 }
