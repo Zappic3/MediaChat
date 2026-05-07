@@ -183,10 +183,6 @@ public class MediaElement {
             return new MediaElement(hashcode, new ArrayList<>(), importance, -1);
         });
         element._lastTimeUsed = System.currentTimeMillis();
-        if (element._source == null) {
-            element._source = String.valueOf(hashcode);
-            element._hashCode = hashcode;
-        }
 
         return element;
     }
