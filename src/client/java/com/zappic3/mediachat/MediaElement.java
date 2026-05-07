@@ -328,12 +328,12 @@ public class MediaElement {
             }
 
         } catch (IOException e) {
-            // handle IOException //todo replace strings with translation keys
-            LOGGER.error("Error Downloading Image: \n"+e.getMessage());
-            setErrorMessage("Error Downloading Image: \n"+e.getMessage());
+            // handle IOException
+            LOGGER.error("Error Downloading Image: \n"+e.getMessage(), e);
+            setErrorMessage(Text.translatable("text.mediachat.mediaElement.downloadError", e.getMessage()).getString());
         } catch (Exception e) {
-            LOGGER.error("Error while registering image: \n" + e.getMessage());
-            setErrorMessage("Error while registering image: \n"+e.getMessage());
+            LOGGER.error("Error while registering image: \n" + e.getMessage(), e);
+            setErrorMessage(Text.translatable("text.mediachat.mediaElement.registerError", e.getMessage()).getString());
         }
         return new MediaIdentifierInfo(MEDIA_DOWNLOAD_FAILED, 512, 512, -1);
     }
@@ -525,6 +525,8 @@ public class MediaElement {
             if (button == 0 && action == 1) {
                 if (FavoriteWidget.hovered()) {
                     FavoriteWidget.resolveClick();
+                } else if (Screen.hasShiftDown()) {
+                    hovered.remove(); // remove image so it can be reloaded
                 } else {
                     client.setScreen(new MediaViewScreen(hovered()));
                 }
@@ -538,24 +540,23 @@ public class MediaElement {
         }
     }
 
-    // todo implement translation
     public Text getTooltip() {
         StringBuilder tooltip = new StringBuilder();
         if (_errorMessage != null) {
-            tooltip.append("§4Error:§c ").append(_errorMessage).append("\n");
+            tooltip.append(Text.translatable("text.mediachat.mediaElement.tooltip.error", _errorMessage).getString())
+                    .append("\n");
         }
-        tooltip.append("§eSource:§b ").append((_source!=null ? _source : "Local Cache")).append("\n");
+        tooltip.append(Text.translatable("text.mediachat.mediaElement.tooltip.source",
+                        (_source!=null ? _source : Text.translatable("text.mediachat.mediaElement.tooltip.source.loadedFromDisk").getString())).getString())
+                .append("\n");
 
         if (_sizeInBit != -1) {
-            tooltip.append("§eSize:§b ").append(formatBits(this.sizeInBit())).append("\n");
+            tooltip.append(Text.translatable("text.mediachat.mediaElement.tooltip.filesize", formatBits(this.sizeInBit())).getString())
+                    .append("\n");
         }
 
         // todo actually implement these keybinds
-        String keybinds = "§7<Leftclick>§8 open image\n" +
-                "§7<Rightclick>§8 copy URL\n" +
-                "§7<Shift+Leftclick>§8 reload Image\n" +
-                "§7<Shift+Rightclick>§8 Insert URL";
-        tooltip.append(keybinds);
+        tooltip.append(Text.translatable("text.mediachat.mediaElement.tooltip.keybinds").getString());
         return Text.of(tooltip.toString());
     }
 
